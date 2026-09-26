@@ -19,6 +19,7 @@ import math
 import os
 import sys
 import time
+import traceback
 from datetime import datetime, timezone
 
 import numpy as np
@@ -44,6 +45,7 @@ def fetch_prices_yahoo(symbols, start):
                 df = yf.Ticker(sym).history(start=start, auto_adjust=True)
                 if df is not None and not df.empty:
                     df.index = pd.to_datetime(df.index).tz_localize(None).normalize()
+                    df = df[~df.index.duplicated(keep="last")].sort_index()  # Yahoo sometimes repeats the last day
                     out[sym] = df[["Close"]].dropna()
                     break
             except Exception as e:  # network hiccup / rate limit
@@ -182,7 +184,9 @@ def fetch_news(sym):
         return []
     out = []
     for it in items[: C.NEWS_PER_STOCK]:
-        c = it.get("content", it)  # yfinance changed formats; handle both
+        c = (it.get("content") or it) if isinstance(it, dict) else {}  # yfinance changed formats; handle both
+        if not isinstance(c, dict):
+            continue
         title = c.get("title")
         url = (c.get("canonicalUrl") or {}).get("url") or (c.get("clickThroughUrl") or {}).get("url") or c.get("link")
         source = (c.get("provider") or {}).get("displayName") or c.get("publisher")
@@ -250,53 +254,70 @@ def main():
     for sym in symbols:
         if sym not in prices:
             continue
-        df = add_indicators(prices[sym].copy())
-        c = df["Close"]
-        last = df.index[-1]
-        is_bench = sym in C.BENCHMARKS
-
-        info = {
-            "symbol": sym,
-            "name": names[sym],
-            "benchmark": is_bench,
-            "date": last.strftime("%Y-%m-%d"),
-            "price": clean(c.iloc[-1], 2),
-            "chg_1d": clean(c.iloc[-1] / c.iloc[-2] - 1),
-            "chg_5d": clean(df["ret_week"].iloc[-1]),
-            "chg_ytd": clean(pct_change_since(c, pd.Timestamp(last.year - 1, 12, 31))),
-            "chg_1y": clean(pct_change_since(c, last - pd.DateOffset(years=1))),
-            "from_52w_high": clean(c.iloc[-1] / df["high_52w"].iloc[-1] - 1),
-            "sma50": clean(df["sma50"].iloc[-1], 2),
-            "sma200": clean(df["sma200"].iloc[-1], 2),
-            "rsi14": clean(df["rsi14"].iloc[-1], 1),
-        }
-        info["trend"] = ("Uptrend" if info["sma200"] and info["price"] > info["sma200"] else "Downtrend")
-
-        if is_bench:
-            info["signal"], info["signal_note"] = "BENCHMARK", "Benchmark — not traded."
-            trades = []
-        else:
-            trades = backtest(df, bench_close)
-            info["signal"], info["signal_note"] = signal_status(df, trades)
-            for t in trades:
-                all_trades.append({**t, "symbol": sym})
-        info["trades"] = trades
-        info["backtest"] = summarize(trades) if not is_bench else None
-
-        tail = df.tail(C.CHART_DAYS)
-        info["history"] = [
-            [d.strftime("%Y-%m-%d"), clean(r.Close, 2), clean(r.sma50, 2), clean(r.sma200, 2)]
-            for d, r in tail.iterrows()
-        ]
-
-        info["news"] = [] if args.sample else fetch_news(sym)
-        info["ai_summary"] = None
-        if not args.sample and not args.no_ai and not is_bench:
-            info["ai_summary"] = ai_summary(sym, names[sym], info, info["news"])
-            time.sleep(4)  # stay under the free-tier rate limit
+        try:
+            info, trades = process(sym, names, prices, bench_close, args)
+        except Exception:
+            print(f"  ERROR processing {sym} — skipping it:")
+            traceback.print_exc()
+            continue
         stocks[sym] = info
+        for t in trades:
+            all_trades.append({**t, "symbol": sym})
         print(f"  {sym}: {info['signal']}")
 
+    if not stocks:
+        sys.exit("Every stock failed — see the errors above.")
+    finish(stocks, all_trades, symbols, args)
+
+
+def process(sym, names, prices, bench_close, args):
+    """Indicators, signal, backtest, news and AI summary for one stock."""
+    df = add_indicators(prices[sym].copy())
+    c = df["Close"]
+    last = df.index[-1]
+    is_bench = sym in C.BENCHMARKS
+
+    info = {
+        "symbol": sym,
+        "name": names[sym],
+        "benchmark": is_bench,
+        "date": last.strftime("%Y-%m-%d"),
+        "price": clean(c.iloc[-1], 2),
+        "chg_1d": clean(c.iloc[-1] / c.iloc[-2] - 1),
+        "chg_5d": clean(df["ret_week"].iloc[-1]),
+        "chg_ytd": clean(pct_change_since(c, pd.Timestamp(last.year - 1, 12, 31))),
+        "chg_1y": clean(pct_change_since(c, last - pd.DateOffset(years=1))),
+        "from_52w_high": clean(c.iloc[-1] / df["high_52w"].iloc[-1] - 1),
+        "sma50": clean(df["sma50"].iloc[-1], 2),
+        "sma200": clean(df["sma200"].iloc[-1], 2),
+        "rsi14": clean(df["rsi14"].iloc[-1], 1),
+    }
+    info["trend"] = ("Uptrend" if info["sma200"] and info["price"] > info["sma200"] else "Downtrend")
+
+    if is_bench:
+        info["signal"], info["signal_note"] = "BENCHMARK", "Benchmark — not traded."
+        trades = []
+    else:
+        trades = backtest(df, bench_close)
+        info["signal"], info["signal_note"] = signal_status(df, trades)
+    info["trades"] = trades
+    info["backtest"] = summarize(trades) if not is_bench else None
+
+    tail = df.tail(C.CHART_DAYS)
+    info["history"] = [
+        [d.strftime("%Y-%m-%d"), clean(r.Close, 2), clean(r.sma50, 2), clean(r.sma200, 2)]
+        for d, r in tail.iterrows()
+    ]
+
+    info["news"] = [] if args.sample else fetch_news(sym)
+    info["ai_summary"] = None
+    if not args.sample and not args.no_ai and not is_bench:
+        info["ai_summary"] = ai_summary(sym, names[sym], info, info["news"])
+        time.sleep(4)  # stay under the free-tier rate limit
+    return info, trades
+
+
+def finish(stocks, all_trades, symbols, args):
     all_trades.sort(key=lambda t: t["entry_date"], reverse=True)
     data = {
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
