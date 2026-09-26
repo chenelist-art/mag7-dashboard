@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mag 7 Dip Dashboard</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Cpath d=%22M1 4l5 7 3-3 6 6%22 fill=%22none%22 stroke=%22%232a78d6%22 stroke-width=%222%22/%3E%3C/svg%3E">
+<meta name="description" content="Daily Mag 7 dip-buying signals, charts, news and backtest.">
+<script src="chart.umd.js"></script><!-- Chart.js 4.4.4, MIT, bundled so there is no CDN dependency -->
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f5f5f3;
+  --surface: #fcfcfb;
+  --surface-2: #f0efec;
+  --border: #e3e2de;
+  --grid: #ebeae6;
+  --text: #0b0b0b;
+  --text-2: #52514e;
+  --text-3: #7a7974;
+  --s1: #2a78d6;   /* price / series 1 */
+  --s2: #eb6834;   /* 50-day avg / series 2 */
+  --s3: #1baf7a;   /* 200-day avg */
+  --up: #2a78d6;   /* diverging: gain */
+  --down: #e34948; /* diverging: loss */
+  --good: #0ca30c;
+  --good-text: #006300;
+  --warn: #fab219;
+  --warn-text: #8a5a00;
+  --crit: #d03b3b;
+  --info-bg: #e6effa;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #111110; --surface: #1a1a19; --surface-2: #242422; --border: #2f2f2c; --grid: #2a2a28;
+    --text: #ffffff; --text-2: #c3c2b7; --text-3: #8f8e86;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+    --up: #3987e5; --down: #e66767;
+    --good-text: #4cc94c; --warn-text: #fab219; --info-bg: #1c2a3d;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #111110; --surface: #1a1a19; --surface-2: #242422; --border: #2f2f2c; --grid: #2a2a28;
+  --text: #ffffff; --text-2: #c3c2b7; --text-3: #8f8e86;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+  --up: #3987e5; --down: #e66767;
+  --good-text: #4cc94c; --warn-text: #fab219; --info-bg: #1c2a3d;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.num { font-variant-numeric: tabular-nums; }
+a { color: var(--s1); }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 24px 16px 64px; }
+header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+h1 { font-size: 24px; margin: 0; letter-spacing: -0.01em; }
+h2 { font-size: 16px; margin: 0 0 4px; }
+.sub { color: var(--text-2); margin: 2px 0 0; }
+.muted { color: var(--text-3); font-size: 12px; }
+.btn {
+  border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  border-radius: 8px; padding: 6px 10px; font: inherit; cursor: pointer;
+}
+.btn:hover { background: var(--surface-2); }
+.btn[aria-pressed="true"] { background: var(--text); color: var(--surface); border-color: var(--text); }
+.banner { background: var(--info-bg); border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+section { margin-top: 20px; }
+.sec-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+
+/* signal cards */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.sc { cursor: pointer; text-align: left; font: inherit; color: inherit; width: 100%; }
+.sc:hover { border-color: var(--text-3); }
+.sc .t { font-weight: 650; font-size: 15px; }
+.sc .p { font-size: 20px; font-weight: 600; margin: 2px 0; }
+.chg-up { color: var(--up); }
+.chg-down { color: var(--down); }
+.badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--text-2); }
+.badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); }
+.badge.BUY { color: var(--good-text); } .badge.BUY .dot { background: var(--good); }
+.badge.WATCH { color: var(--warn-text); } .badge.WATCH .dot { background: var(--warn); }
+.badge.HOLDING { color: var(--s1); } .badge.HOLDING .dot { background: var(--s1); }
+.badge.BENCHMARK .dot { background: transparent; border: 1.5px solid var(--text-3); }
+
+/* tables */
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { color: var(--text-2); font-weight: 600; font-size: 12px; cursor: pointer; user-select: none; }
+th.nosort { cursor: default; }
+tbody tr:hover { background: var(--surface-2); }
+tr.bench td { color: var(--text-2); }
+
+/* bar chart (weekly change) */
+.bars svg { display: block; overflow: visible; }
+.bars text { fill: var(--text-2); font-size: 12px; }
+.bars .lbl { fill: var(--text); font-weight: 600; }
+.bars .bar:hover { opacity: .8; }
+
+/* detail */
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.detail-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; margin-top: 12px; }
+@media (max-width: 860px) { .detail-grid { grid-template-columns: 1fr; } }
+.chart-box { position: relative; height: 340px; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--text-2); margin: 8px 0; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { display: inline-block; width: 14px; height: 2px; border-radius: 2px; }
+.legend i.tri { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 9px solid var(--text); border-radius: 0; }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; font-size: 13px; }
+.kv dt { color: var(--text-2); } .kv dd { margin: 0; text-align: right; font-weight: 600; }
+.note { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; margin: 12px 0; }
+.news { list-style: none; padding: 0; margin: 0; }
+.news li { padding: 8px 0; border-bottom: 1px solid var(--grid); }
+.news li:last-child { border-bottom: 0; }
+.news a { color: var(--text); text-decoration: none; font-weight: 500; }
+.news a:hover { text-decoration: underline; }
+
+/* stat tiles */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.tile .v { font-size: 22px; font-weight: 650; }
+.tile .k { color: var(--text-2); font-size: 12px; }
+
+footer { margin-top: 32px; color: var(--text-3); font-size: 12px; }
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Mag 7 Dip Dashboard</h1>
+      <p class="sub" id="asof">Loading…</p>
+    </div>
+    <button class="btn" id="themeBtn" type="button">Theme: auto</button>
+  </header>
+
+  <div id="sampleBanner" class="banner hidden"><strong>Sample data.</strong> These prices are randomly generated for testing. Real data appears after the first GitHub Actions run.</div>
+  <div id="errBanner" class="banner hidden"></div>
+
+  <!-- 1. Today's signals -->
+  <section>
+    <div class="sec-head">
+      <div><h2>Today's dip signals</h2><span class="muted" id="ruleText"></span></div>
+    </div>
+    <div class="cards" id="cards"></div>
+  </section>
+
+  <!-- 2. Weekly change vs trigger -->
+  <section class="card">
+    <div class="sec-head">
+      <div><h2>How close is each stock to the trigger?</h2>
+      <span class="muted">5-day price change. The buy rule fires when a bar crosses the trigger line.</span></div>
+    </div>
+    <div class="bars" id="bars"></div>
+  </section>
+
+  <!-- 3. Overview table -->
+  <section class="card">
+    <div class="sec-head"><div><h2>Overview</h2><span class="muted">Click a column to sort · click a row to open it</span></div></div>
+    <div class="tbl-wrap"><table id="overview"></table></div>
+  </section>
+
+  <!-- 4. Stock detail -->
+  <section class="card" id="detail">
+    <div class="sec-head">
+      <div class="tabs" id="tabs"></div>
+      <div class="tabs" id="ranges"></div>
+    </div>
+    <div class="detail-grid">
+      <div>
+        <h2 id="dTitle"></h2>
+        <div class="legend">
+          <span><i style="background:var(--s1)"></i>Price</span>
+          <span><i style="background:var(--s2)"></i>50-day average</span>
+          <span><i style="background:var(--s3)"></i>200-day average</span>
+          <span id="legTri"><i class="tri"></i>Dip buy (backtest)</span>
+        </div>
+        <div class="chart-box"><canvas id="priceChart" aria-label="Price chart" role="img"></canvas></div>
+        <div id="dAi"></div>
+        <h2 style="margin-top:14px">Latest news</h2>
+        <ul class="news" id="dNews"></ul>
+      </div>
+      <div>
+        <div id="dNote" class="note"></div>
+        <dl class="kv" id="dStats"></dl>
+        <h2 style="margin-top:16px">Backtest for this stock</h2>
+        <p class="muted" id="dBtNote"></p>
+        <dl class="kv" id="dBt"></dl>
+      </div>
+    </div>
+    <div id="dTradesWrap" style="margin-top:16px">
+      <h2>Every dip trade for this stock</h2>
+      <div class="tbl-wrap"><table id="dTrades"></table></div>
+    </div>
+  </section>
+
+  <!-- 5. Strategy backtest -->
+  <section class="card">
+    <div class="sec-head"><div><h2>Strategy backtest (all Mag 7)</h2><span class="muted" id="btRule"></span></div></div>
+    <div class="tiles" id="tiles"></div>
+    <h2 style="margin-top:18px">Average trade return vs SPY over the same dates</h2>
+    <div class="legend">
+      <span><i style="background:var(--s1);height:10px;width:10px"></i>Dip trade</span>
+      <span><i style="background:var(--s2);height:10px;width:10px"></i>SPY, same dates</span>
+    </div>
+    <div class="chart-box" style="height:280px"><canvas id="btChart" aria-label="Backtest comparison chart" role="img"></canvas></div>
+    <h2 style="margin-top:18px">Most recent trades</h2>
+    <div class="tbl-wrap"><table id="recentTrades"></table></div>
+  </section>
+
+  <footer>
+    <p><strong>Not financial advice.</strong> A personal learning project. Backtests use past prices and ignore fees, taxes and slippage; past results don't predict future returns. Prices from Yahoo Finance (via yfinance), which can be delayed or wrong. AI summaries are generated by a language model from headlines and can be inaccurate.</p>
+  </footer>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const pct = (x, d = 1, sign = true) => x == null ? "—" : (sign && x > 0 ? "+" : "") + (x * 100).toFixed(d) + "%";
+const money = (x) => x == null ? "—" : "$" + x.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const cls = (x) => x == null ? "" : x >= 0 ? "chg-up" : "chg-down";
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const LABELS = { BUY: "Buy signal", HOLDING: "Holding", WATCH: "Watch", NONE: "No signal", BENCHMARK: "Benchmark" };
+const badge = (s) => `<span class="badge ${s}"><span class="dot"></span>${LABELS[s] || s}</span>`;
+
+let DATA, current, range = 252, priceChart, btChart;
+
+/* ---------- theme toggle (auto → light → dark) ---------- */
+const THEMES = ["auto", "light", "dark"];
+let theme = "auto";
+try { theme = localStorage.getItem("theme") || "auto"; } catch (e) {}
+function applyTheme() {
+  if (theme === "auto") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", theme);
+  $("themeBtn").textContent = "Theme: " + theme;
+  if (DATA) { renderBars(); renderDetail(); renderBtChart(); }
+}
+$("themeBtn").onclick = () => {
+  theme = THEMES[(THEMES.indexOf(theme) + 1) % 3];
+  try { localStorage.setItem("theme", theme); } catch (e) {}
+  applyTheme();
+};
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => theme === "auto" && applyTheme());
+
+/* ---------- load ---------- */
+fetch("data.json?t=" + Date.now())
+  .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then((d) => { DATA = d; init(); })
+  .catch((e) => {
+    $("asof").textContent = "Couldn't load data.json";
+    const b = $("errBanner"); b.classList.remove("hidden");
+    b.innerHTML = "No data yet. Run <code>python build.py</code> (or the GitHub Action) to create <code>docs/data.json</code>. If you opened this file directly, serve the folder instead: <code>python -m http.server -d docs</code>.";
+  });
+
+function init() {
+  const s = DATA.settings;
+  const first = DATA.stocks[DATA.order[0]];
+  const gen = new Date(DATA.generated_at);
+  $("asof").textContent = `Prices as of US close ${first.date} · updated ${gen.toLocaleString()}`;
+  if (DATA.sample) $("sampleBanner").classList.remove("hidden");
+  const rule = `Rule: buy when a stock drops ${pct(s.dip_threshold, 0, false)}+ in ${s.lookback_days} trading days, hold ${s.hold_days} trading days (~3 months).`;
+  $("ruleText").textContent = rule;
+  $("btRule").textContent = rule + ` Tested since ${s.backtest_start.slice(0, 4)}, compared with ${s.benchmark}.`;
+  current = DATA.order.find((k) => DATA.stocks[k].signal === "BUY") || DATA.order[0];
+
+  renderCards(); renderBars(); renderOverview(); renderTabs(); renderDetail(); renderBacktest();
+}
+
+/* ---------- 1. cards ---------- */
+function renderCards() {
+  $("cards").innerHTML = DATA.order.map((k) => {
+    const s = DATA.stocks[k];
+    return `<button class="card sc" data-k="${k}" type="button">
+      <div class="t">${k} <span class="muted">${esc(s.name)}</span></div>
+      <div class="p num">${money(s.price)}</div>
+      <div class="num" style="font-size:12px"><span class="${cls(s.chg_1d)}">${pct(s.chg_1d)}</span> 1D · <span class="${cls(s.chg_5d)}">${pct(s.chg_5d)}</span> 1W</div>
+      <div style="margin-top:8px">${badge(s.signal)}</div>
+    </button>`;
+  }).join("");
+  document.querySelectorAll(".sc").forEach((el) => el.onclick = () => select(el.dataset.k, true));
+}
+
+/* ---------- 2. diverging bars: weekly change ---------- */
+function renderBars() {
+  const rows = DATA.order.map((k) => ({ k, v: DATA.stocks[k].chg_5d ?? 0, bench: DATA.stocks[k].benchmark }));
+  const trig = -DATA.settings.dip_threshold, watch = -DATA.settings.watch_threshold;
+  const W = Math.max(300, $("bars").clientWidth || 760), rowH = 30, top = 26, left = 52, right = 58, H = top + rows.length * rowH + 6;
+  const lo = Math.min(trig * 1.4, ...rows.map((r) => r.v)), hi = Math.max(0.05, ...rows.map((r) => r.v));
+  const x = (v) => left + (v - lo) / (hi - lo) * (W - left - right);
+  let svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="5-day change by stock">`;
+  // reference lines (solid hairlines; labelled so they aren't mistaken for grid)
+  for (const [v, name, col] of [[0, "0%", css("--border")], [watch, "Watch " + pct(watch, 0), css("--warn")], [trig, "Trigger " + pct(trig, 0), css("--crit")]]) {
+    svg += `<line x1="${x(v)}" x2="${x(v)}" y1="${top - 6}" y2="${H}" stroke="${col}" stroke-width="${v === 0 ? 1 : 1.5}"/>`;
+    if (v !== 0) svg += `<text x="${v === trig ? x(v) - 4 : x(v) + 4}" y="${top - 12}" text-anchor="${v === trig ? "end" : "start"}" style="font-size:11px">${name}</text>`;
+  }
+  rows.forEach((r, i) => {
+    const y = top + i * rowH + 6, h = rowH - 12;
+    const x0 = x(Math.min(0, r.v)), w = Math.max(2, Math.abs(x(r.v) - x(0)));
+    const col = r.v >= 0 ? css("--up") : css("--down");
+    svg += `<text x="${left - 8}" y="${y + h / 2 + 4}" text-anchor="end" class="${r.bench ? "" : "lbl"}">${r.k}</text>`;
+    svg += `<rect class="bar" x="${x0}" y="${y}" width="${w}" height="${h}" rx="4" fill="${col}" opacity="${r.bench ? 0.55 : 1}"><title>${r.k}: ${pct(r.v)} over 5 days</title></rect>`;
+    const lx = r.v >= 0 ? x(r.v) + 6 : x(r.v) - 6;
+    svg += `<text x="${lx}" y="${y + h / 2 + 4}" text-anchor="${r.v >= 0 ? "start" : "end"}" class="num">${pct(r.v)}</text>`;
+  });
+  $("bars").innerHTML = svg + "</svg>";
+}
+let rsz; addEventListener("resize", () => { clearTimeout(rsz); rsz = setTimeout(() => DATA && renderBars(), 150); });
+
+/* ---------- 3. overview table (sortable) ---------- */
+const COLS = [
+  ["symbol", "Stock"], ["price", "Price"], ["chg_1d", "1D"], ["chg_5d", "1W"], ["chg_ytd", "YTD"], ["chg_1y", "1Y"],
+  ["from_52w_high", "From 52w high"], ["rsi14", "RSI (14)"], ["trend", "Trend (vs 200d)"], ["signal", "Signal"],
+];
+let sortKey = null, sortDir = 1;
+function renderOverview() {
+  let keys = [...DATA.order];
+  if (sortKey) keys.sort((a, b) => {
+    const A = DATA.stocks[a][sortKey], B = DATA.stocks[b][sortKey];
+    return (A > B ? 1 : A < B ? -1 : 0) * sortDir;
+  });
+  const head = "<thead><tr>" + COLS.map(([k, l]) => `<th data-k="${k}">${l}${sortKey === k ? (sortDir > 0 ? " ▲" : " ▼") : ""}</th>`).join("") + "</tr></thead>";
+  const body = keys.map((k) => {
+    const s = DATA.stocks[k];
+    return `<tr data-k="${k}" class="${s.benchmark ? "bench" : ""}" style="cursor:pointer">
+      <td><strong>${k}</strong> <span class="muted">${esc(s.name)}</span></td>
+      <td class="num">${money(s.price)}</td>
+      ${["chg_1d", "chg_5d", "chg_ytd", "chg_1y", "from_52w_high"].map((c) => `<td class="num ${cls(s[c])}">${pct(s[c])}</td>`).join("")}
+      <td class="num">${s.rsi14 ?? "—"}</td><td>${s.trend}</td><td>${badge(s.signal)}</td></tr>`;
+  }).join("");
+  $("overview").innerHTML = head + "<tbody>" + body + "</tbody>";
+  $("overview").querySelectorAll("th").forEach((th) => th.onclick = () => {
+    const k = th.dataset.k; sortDir = sortKey === k ? -sortDir : (k === "symbol" || k === "trend" || k === "signal" ? 1 : -1); sortKey = k; renderOverview();
+  });
+  $("overview").querySelectorAll("tbody tr").forEach((tr) => tr.onclick = () => select(tr.dataset.k, true));
+}
+
+/* ---------- 4. detail ---------- */
+function renderTabs() {
+  $("tabs").innerHTML = DATA.order.map((k) => `<button class="btn" type="button" data-k="${k}" aria-pressed="${k === current}">${k}</button>`).join("");
+  $("tabs").querySelectorAll("button").forEach((b) => b.onclick = () => select(b.dataset.k));
+  const R = [["3M", 63], ["6M", 126], ["1Y", 252], ["2Y", 504]];
+  $("ranges").innerHTML = R.map(([l, n]) => `<button class="btn" type="button" data-n="${n}" aria-pressed="${n === range}">${l}</button>`).join("");
+  $("ranges").querySelectorAll("button").forEach((b) => b.onclick = () => { range = +b.dataset.n; renderTabs(); renderDetail(); });
+}
+function select(k, scroll) {
+  current = k; renderTabs(); renderDetail();
+  if (scroll) $("detail").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+const crosshair = {
+  id: "crosshair",
+  afterDraw(chart) {
+    const a = chart.tooltip?.getActiveElements?.();
+    if (!a || !a.length) return;
+    const { ctx, chartArea: { top, bottom } } = chart, x = a[0].element.x;
+    ctx.save(); ctx.strokeStyle = css("--text-3"); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, bottom); ctx.stroke(); ctx.restore();
+  },
+};
+
+function chartDefaults() {
+  Chart.defaults.color = css("--text-2");
+  Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+  Chart.defaults.font.size = 12;
+}
+function tooltipStyle() {
+  return {
+    backgroundColor: css("--surface"), titleColor: css("--text"), bodyColor: css("--text-2"),
+    borderColor: css("--border"), borderWidth: 1, padding: 10, boxPadding: 4, usePointStyle: true,
+  };
+}
+
+function renderDetail() {
+  const s = DATA.stocks[current];
+  $("dTitle").innerHTML = `${current} <span class="muted">${esc(s.name)}</span> &nbsp;${badge(s.signal)}`;
+  $("dNote").textContent = s.signal_note;
+  $("legTri").classList.toggle("hidden", s.benchmark);
+
+  $("dStats").innerHTML = [
+    ["Price", money(s.price)], ["Today", `<span class="${cls(s.chg_1d)}">${pct(s.chg_1d)}</span>`],
+    ["This week (5 days)", `<span class="${cls(s.chg_5d)}">${pct(s.chg_5d)}</span>`],
+    ["Year to date", `<span class="${cls(s.chg_ytd)}">${pct(s.chg_ytd)}</span>`],
+    ["From 52-week high", pct(s.from_52w_high)], ["50-day average", money(s.sma50)],
+    ["200-day average", money(s.sma200)], ["RSI (14)", s.rsi14 ?? "—"], ["Trend", s.trend],
+  ].map(([k, v]) => `<dt>${k}</dt><dd class="num">${v}</dd>`).join("");
+
+  const bt = s.backtest;
+  if (!bt) {
+    $("dBtNote").textContent = "Benchmarks aren't traded — they're here for comparison.";
+    $("dBt").innerHTML = ""; $("dTradesWrap").classList.add("hidden");
+  } else if (!bt.trades) {
+    $("dBtNote").textContent = "The rule never triggered for this stock in the test period.";
+    $("dBt").innerHTML = ""; $("dTradesWrap").classList.add("hidden");
+  } else {
+    $("dBtNote").textContent = `${bt.trades} completed trade${bt.trades > 1 ? "s" : ""} since ${DATA.settings.backtest_start.slice(0, 4)}.`;
+    $("dBt").innerHTML = [
+      ["Win rate", pct(bt.win_rate, 0, false)], ["Average trade", pct(bt.avg_return)],
+      ["SPY over same dates", pct(bt.avg_spy_return)], ["Beat SPY by (avg)", pct(bt.avg_excess)],
+      ["Best trade", pct(bt.best)], ["Worst trade", pct(bt.worst)],
+    ].map(([k, v]) => `<dt>${k}</dt><dd class="num">${v}</dd>`).join("");
+    $("dTradesWrap").classList.remove("hidden");
+    $("dTrades").innerHTML = tradeTable(s.trades.slice().reverse(), false);
+  }
+
+  $("dAi").innerHTML = s.ai_summary
+    ? `<div class="note"><strong>AI news summary</strong> <span class="muted">(${esc(DATA.settings.ai_model || "LLM")}, may be inaccurate)</span><br>${esc(s.ai_summary)}</div>`
+    : "";
+  $("dNews").innerHTML = s.news && s.news.length
+    ? s.news.map((n) => `<li><a href="${esc(n.url || "#")}" target="_blank" rel="noopener">${esc(n.title)}</a><div class="muted">${esc(n.source || "")}${n.date ? " · " + new Date(n.date).toLocaleDateString() : ""}</div></li>`).join("")
+    : `<li class="muted">No headlines${DATA.sample ? " in sample mode" : ""}.</li>`;
+
+  drawPrice(s);
+}
+
+function drawPrice(s) {
+  chartDefaults();
+  const h = s.history.slice(-range);
+  const labels = h.map((r) => r[0]);
+  const idx = new Map(labels.map((d, i) => [d, i]));
+  const buys = labels.map(() => null);
+  (s.trades || []).forEach((t) => { if (idx.has(t.entry_date)) buys[idx.get(t.entry_date)] = t.entry_price; });
+  const surface = css("--surface");
+  const line = (label, i, color, w) => ({
+    label, data: h.map((r) => r[i]), borderColor: color, backgroundColor: color, borderWidth: w,
+    pointRadius: 0, pointHoverRadius: 4, pointHoverBorderColor: surface, pointHoverBorderWidth: 2, tension: 0, spanGaps: true,
+  });
+  const cfg = {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        line("Price", 1, css("--s1"), 2),
+        line("50-day avg", 2, css("--s2"), 1.5),
+        line("200-day avg", 3, css("--s3"), 1.5),
+        { label: "Dip buy", data: buys, showLine: false, pointStyle: "triangle", pointRadius: 7, pointHoverRadius: 9,
+          backgroundColor: css("--text"), borderColor: surface, borderWidth: 2 },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: { ...tooltipStyle(), filter: (i) => i.raw != null,
+          callbacks: { label: (c) => ` ${c.dataset.label}: ${money(c.raw)}` } },
+      },
+      scales: {
+        x: { grid: { display: false }, border: { color: css("--border") },
+             ticks: { maxTicksLimit: 6, maxRotation: 0, callback: function (v) { const d = this.getLabelForValue(v); return new Date(d + "T00:00").toLocaleDateString(undefined, range <= 126 ? { month: "short", day: "numeric" } : { month: "short", year: "2-digit" }); } } },
+        y: { grid: { color: css("--grid") }, border: { display: false }, ticks: { callback: (v) => "$" + v } },
+      },
+    },
+    plugins: [crosshair],
+  };
+  if (priceChart) priceChart.destroy();
+  priceChart = new Chart($("priceChart"), cfg);
+}
+
+function tradeTable(trades, withSym) {
+  const head = `<thead><tr>${withSym ? '<th class="nosort">Stock</th>' : ""}<th class="nosort">Bought</th><th class="nosort">Week drop</th><th class="nosort">Buy price</th><th class="nosort">Sold</th><th class="nosort">Sell price</th><th class="nosort">Return</th><th class="nosort">SPY same dates</th></tr></thead>`;
+  const rows = trades.map((t) => `<tr>${withSym ? `<td><strong>${t.symbol}</strong></td>` : ""}
+    <td${withSym ? "" : ' style="text-align:left"'}>${t.entry_date}</td><td class="num">${pct(t.drop)}</td><td class="num">${money(t.entry_price)}</td>
+    <td>${t.open ? "<em>still holding</em>" : t.exit_date}</td><td class="num">${t.open ? "—" : money(t.exit_price)}</td>
+    <td class="num ${cls(t.return)}">${pct(t.return)}${t.open ? "*" : ""}</td><td class="num ${cls(t.spy_return)}">${pct(t.spy_return)}</td></tr>`).join("");
+  return head + "<tbody>" + rows + "</tbody>";
+}
+
+/* ---------- 5. backtest ---------- */
+function renderBacktest() {
+  const o = DATA.overall;
+  const tiles = o.trades ? [
+    [o.trades, "Completed trades"], [pct(o.win_rate, 0, false), "Win rate"], [pct(o.avg_return), "Average trade return"],
+    [pct(o.avg_spy_return), "SPY over same dates"], [pct(o.avg_excess), "Average edge vs SPY"],
+  ] : [["0", "No trades triggered"]];
+  $("tiles").innerHTML = tiles.map(([v, k]) => `<div class="card tile"><div class="v num">${v}</div><div class="k">${k}</div></div>`).join("");
+  renderBtChart();
+  $("recentTrades").innerHTML = tradeTable(DATA.all_trades.slice(0, 12), true) +
+    `<caption style="caption-side:bottom;text-align:left" class="muted">* open trade, return so far.</caption>`;
+}
+function renderBtChart() {
+  chartDefaults();
+  const keys = DATA.order.filter((k) => !DATA.stocks[k].benchmark && DATA.stocks[k].backtest?.trades);
+  const bar = (label, f, color) => ({
+    label, data: keys.map((k) => f(DATA.stocks[k].backtest) * 100), backgroundColor: color,
+    borderRadius: 4, borderSkipped: false, maxBarThickness: 22, categoryPercentage: 0.7, barPercentage: 0.85,
+  });
+  const cfg = {
+    type: "bar",
+    data: { labels: keys, datasets: [bar("Dip trade (avg)", (b) => b.avg_return, css("--s1")), bar("SPY same dates (avg)", (b) => b.avg_spy_return ?? 0, css("--s2"))] },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: { ...tooltipStyle(), callbacks: {
+          title: (i) => `${i[0].label} · ${DATA.stocks[i[0].label].backtest.trades} trades`,
+          label: (c) => ` ${c.dataset.label}: ${c.raw > 0 ? "+" : ""}${c.raw.toFixed(1)}%` } },
+      },
+      scales: {
+        x: { grid: { display: false }, border: { color: css("--border") } },
+        y: { grid: { color: (c) => c.tick.value === 0 ? css("--text-3") : css("--grid") }, border: { display: false }, ticks: { callback: (v) => v + "%" } },
+      },
+    },
+  };
+  if (btChart) btChart.destroy();
+  btChart = new Chart($("btChart"), cfg);
+}
+
+applyTheme();
+</script>
+</body>
+</html>
