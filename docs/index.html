@@ -4,200 +4,456 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Market &amp; Mag 7 Dashboard</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Cpath d=%22M1 4l5 7 3-3 6 6%22 fill=%22none%22 stroke=%22%232a78d6%22 stroke-width=%222%22/%3E%3C/svg%3E">
-<meta name="description" content="Daily S&amp;P 500 market breadth by sector, plus Mag 7 dip-buying signals, charts, news and backtest.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect x=%222%22 y=%222%22 width=%2228%22 height=%2228%22 rx=%228%22 fill=%22%23F6D27A%22 stroke=%22%233E3A39%22 stroke-width=%223%22/%3E%3Cpath d=%22M8 21l6-6 4 4 6-8%22 fill=%22none%22 stroke=%22%233E3A39%22 stroke-width=%223%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/%3E%3C/svg%3E">
+<meta name="description" content="Daily S&amp;P 500 market breadth by sector, trade-idea screens, plus Mag 7 dip-buying signals, charts, news and backtest.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Huninn&display=swap" rel="stylesheet">
 <script src="chart.umd.js"></script><!-- Chart.js 4.4.4, MIT, bundled so there is no CDN dependency -->
 <style>
+/* =========================================================
+   Picture-book theme — washi paper, charcoal outlines, flat pastel fills
+   ========================================================= */
 :root {
   color-scheme: light;
-  --bg: #f5f5f3;
-  --surface: #fcfcfb;
-  --surface-2: #f0efec;
-  --border: #e3e2de;
-  --grid: #ebeae6;
-  --text: #0b0b0b;
-  --text-2: #52514e;
-  --text-3: #7a7974;
-  --s1: #2a78d6;   /* price / series 1 */
-  --s2: #eb6834;   /* 50-day avg / series 2 */
-  --s3: #1baf7a;   /* 200-day avg */
-  --up: #2a78d6;   /* diverging: gain */
-  --down: #e34948; /* diverging: loss */
-  --good: #0ca30c;
-  --good-text: #006300;
-  --warn: #fab219;
-  --warn-text: #8a5a00;
-  --crit: #d03b3b;
-  --info-bg: #e6effa;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --bg: #111110; --surface: #1a1a19; --surface-2: #242422; --border: #2f2f2c; --grid: #2a2a28;
-    --text: #ffffff; --text-2: #c3c2b7; --text-3: #8f8e86;
-    --s1: #3987e5; --s2: #d95926; --s3: #199e70;
-    --up: #3987e5; --down: #e66767;
-    --good-text: #4cc94c; --warn-text: #fab219; --info-bg: #1c2a3d;
-  }
-}
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --bg: #111110; --surface: #1a1a19; --surface-2: #242422; --border: #2f2f2c; --grid: #2a2a28;
-  --text: #ffffff; --text-2: #c3c2b7; --text-3: #8f8e86;
-  --s1: #3987e5; --s2: #d95926; --s3: #199e70;
-  --up: #3987e5; --down: #e66767;
-  --good-text: #4cc94c; --warn-text: #fab219; --info-bg: #1c2a3d;
+  --washi: #FFFCF6;
+  --ink: #3E3A39;
+  --coral: #F2A497;
+  --yamabuki: #F6D27A;
+  --mizu: #A8D3E6;
+  --wakatake: #B9DAA5;
+  /* soft tints of the palette for large areas */
+  --coral-t: #FCE6E1;
+  --yamabuki-t: #FDF2D6;
+  --mizu-t: #E3F1F7;
+  --wakatake-t: #E9F3E2;
+  /* readable text versions of up/down (palette hues, darkened for contrast) */
+  --up-ink: #4C8A3C;
+  --down-ink: #C0574A;
+
+  --bg: var(--washi);
+  --surface: #FFFFFF;
+  --surface-2: #F8F1E4;
+  --border: #E8DECB;      /* hairlines inside cards */
+  --grid: #EFE7D8;
+  --text: var(--ink);
+  --text-2: #615A57;
+  --text-3: #8C8480;
+  --s1: #3E3A39;        /* main line: price, MACD, RSI */
+  --s2: #F2A497;      /* 50-day avg / signal line */
+  --s3: #8EC07A;           /* 200-day avg (wakatake, one step deeper so a thin line shows) */
+  --up: #B9DAA5;   /* fills */
+  --down: #F2A497;
+  --good: var(--wakatake);
+  --good-text: var(--up-ink);
+  --warn: #E8B740;
+  --warn-text: #9A6B00;
+  --crit: #C0574A;
+  --info-bg: var(--mizu-t);
+  --radius: 22px;
+  --outline: 3px solid var(--ink);
+  --shadow: 4px 4px 0 var(--ink);
 }
 
 * { box-sizing: border-box; }
+html { background: var(--bg); }
 body {
   margin: 0; background: var(--bg); color: var(--text);
-  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font: 15px/1.6 "Huninn", "Arial Rounded MT Bold", "Hiragino Maru Gothic ProN", "Segoe UI", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 .num { font-variant-numeric: tabular-nums; }
-a { color: var(--s1); }
-.wrap { max-width: 1180px; margin: 0 auto; padding: 24px 16px 64px; }
-header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
-h1 { font-size: 24px; margin: 0; letter-spacing: -0.01em; }
-h2 { font-size: 16px; margin: 0 0 4px; }
-.sub { color: var(--text-2); margin: 2px 0 0; }
-.muted { color: var(--text-3); font-size: 12px; }
-.btn {
-  border: 1px solid var(--border); background: var(--surface); color: var(--text);
-  border-radius: 8px; padding: 6px 10px; font: inherit; cursor: pointer;
+a { color: var(--ink); text-decoration-color: var(--coral); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+strong, b { font-weight: 700; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 20px 16px 48px; }
+h1, h2, h3 { font-weight: 400; letter-spacing: 0.01em; }
+h1 { font-size: 34px; margin: 0; line-height: 1.2; }
+h2 { font-size: 18px; margin: 0 0 4px; }
+.sub { color: var(--text-2); margin: 4px 0 0; }
+.muted { color: var(--text-3); font-size: 13px; }
+
+/* ---------- hero ---------- */
+.hero { position: relative; background: var(--surface); border: var(--outline); border-radius: 30px; box-shadow: var(--shadow);
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); align-items: end; overflow: hidden; margin-bottom: 18px; }
+.hero-text { padding: 26px 24px 26px 28px; align-self: center; position: relative; z-index: 1; }
+.hero-text .kicker { display: inline-block; background: var(--yamabuki); border: 2.5px solid var(--ink); border-radius: 999px; padding: 2px 12px; font-size: 13px; margin-bottom: 10px; }
+.hero-text .hbtn { margin-top: 14px; }
+.hero-art { display: block; width: 100%; height: auto; align-self: end; }
+@media (max-width: 760px) {
+  .hero { grid-template-columns: 1fr; }
+  .hero-text { padding: 20px 18px 6px; }
+  h1 { font-size: 27px; }
 }
-.btn:hover { background: var(--surface-2); }
-.btn[aria-pressed="true"] { background: var(--text); color: var(--surface); border-color: var(--text); }
-.banner { background: var(--info-bg); border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; }
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
-section { margin-top: 20px; }
-.sec-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+
+/* ---------- buttons, banners ---------- */
+.btn {
+  border: 2.5px solid var(--ink); background: var(--surface); color: var(--ink);
+  border-radius: 999px; padding: 6px 14px; font: inherit; font-size: 14px; cursor: pointer; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 6px; box-shadow: 2px 2px 0 var(--ink); transition: transform .08s;
+}
+.btn:hover { background: var(--yamabuki-t); }
+.btn:active { transform: translate(2px, 2px); box-shadow: none; }
+.btn[aria-pressed="true"] { background: var(--yamabuki); color: var(--ink); }
+.btn:focus-visible, .search:focus-visible { outline: 3px solid var(--mizu); outline-offset: 2px; }
+.banner { background: var(--yamabuki-t); border: 2.5px solid var(--ink); border-radius: 18px; padding: 10px 16px; margin-bottom: 16px; }
+.card { background: var(--surface); border: var(--outline); border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow); }
+section { margin-top: 26px; }
+.sec-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
+.sec-title { display: flex; align-items: center; gap: 12px; }
+.sec-title > div { min-width: 0; }
+.ico { width: 46px; height: 46px; flex: none; }
+.ico-sm { width: 36px; height: 36px; flex: none; }
 
 /* signal cards */
-.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-.sc { cursor: pointer; text-align: left; font: inherit; color: inherit; width: 100%; }
-.sc:hover { border-color: var(--text-3); }
-.sc .t { font-weight: 650; font-size: 15px; }
-.sc .p { font-size: 20px; font-weight: 600; margin: 2px 0; }
-.chg-up { color: var(--up); }
-.chg-down { color: var(--down); }
-.badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--text-2); }
-.badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); }
-.badge.BUY { color: var(--good-text); } .badge.BUY .dot { background: var(--good); }
-.badge.WATCH { color: var(--warn-text); } .badge.WATCH .dot { background: var(--warn); }
-.badge.HOLDING { color: var(--s1); } .badge.HOLDING .dot { background: var(--s1); }
-.badge.BENCHMARK .dot { background: transparent; border: 1.5px solid var(--text-3); }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; }
+.sc { cursor: pointer; text-align: left; font: inherit; color: inherit; width: 100%; padding: 14px 16px; }
+.sc:nth-child(4n+1) { background: var(--mizu-t); } .sc:nth-child(4n+2) { background: var(--wakatake-t); }
+.sc:nth-child(4n+3) { background: var(--yamabuki-t); } .sc:nth-child(4n+4) { background: var(--coral-t); }
+.sc:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 var(--ink); }
+.sc .t { font-size: 17px; }
+.sc .p { font-size: 22px; margin: 2px 0; }
+.chg-up { color: var(--up-ink); }
+.chg-down { color: var(--down-ink); }
+.badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 2px 10px; border-radius: 999px; background: var(--surface); color: var(--ink); border: 2px solid var(--ink); }
+.badge .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--surface-2); border: 1.5px solid var(--ink); }
+.badge.BUY { background: var(--wakatake); } .badge.BUY .dot { background: var(--surface); }
+.badge.WATCH { background: var(--yamabuki); } .badge.WATCH .dot { background: var(--surface); }
+.badge.HOLDING { background: var(--mizu); } .badge.HOLDING .dot { background: var(--surface); }
+.badge.BENCHMARK .dot { background: transparent; }
 
 /* tables */
 .tbl-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { padding: 8px 10px; text-align: right; border-bottom: 2px dashed var(--border); white-space: nowrap; }
 th:first-child, td:first-child { text-align: left; }
-th { color: var(--text-2); font-weight: 600; font-size: 12px; cursor: pointer; user-select: none; }
+th { color: var(--ink); font-weight: 400; font-size: 13px; cursor: pointer; user-select: none; border-bottom: 2.5px solid var(--ink); }
 th.nosort { cursor: default; }
-tbody tr:hover { background: var(--surface-2); }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover { background: var(--yamabuki-t); }
 tr.bench td { color: var(--text-2); }
 
 /* bar chart (weekly change) */
 .bars svg { display: block; overflow: visible; }
-.bars text { fill: var(--text-2); font-size: 12px; }
-.bars .lbl { fill: var(--text); font-weight: 600; }
+.bars text { fill: var(--text-2); font-size: 13px; }
+.bars .lbl { fill: var(--ink); }
 .bars .bar:hover { opacity: .8; }
 
 /* detail */
-.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
-.detail-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; margin-top: 12px; }
+.tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+.detail-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 20px; margin-top: 14px; }
 @media (max-width: 860px) { .detail-grid { grid-template-columns: 1fr; } }
 .chart-box { position: relative; height: 340px; }
-.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--text-2); margin: 8px 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--text-2); margin: 8px 0; }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
-.legend i { display: inline-block; width: 14px; height: 2px; border-radius: 2px; }
-.legend i.tri { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 9px solid var(--text); border-radius: 0; }
-.kv { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; font-size: 13px; }
-.kv dt { color: var(--text-2); } .kv dd { margin: 0; text-align: right; font-weight: 600; }
-.note { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; margin: 12px 0; }
+.legend i { display: inline-block; width: 16px; height: 4px; border-radius: 4px; }
+.legend i.tri { width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid var(--ink); border-radius: 0; }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 7px 12px; font-size: 14px; }
+.kv dt { color: var(--text-2); } .kv dd { margin: 0; text-align: right; }
+.note { background: var(--mizu-t); border: 2.5px solid var(--ink); border-radius: 16px; padding: 10px 14px; margin: 12px 0; }
 .news { list-style: none; padding: 0; margin: 0; }
-.news li { padding: 8px 0; border-bottom: 1px solid var(--grid); }
+.news li { padding: 8px 0; border-bottom: 2px dashed var(--border); }
 .news li:last-child { border-bottom: 0; }
-.news a { color: var(--text); text-decoration: none; font-weight: 500; }
+.news a { color: var(--text); text-decoration: none; }
 .news a:hover { text-decoration: underline; }
 
 /* stat tiles */
-.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
-.tile .v { font-size: 22px; font-weight: 650; }
-.tile .k { color: var(--text-2); font-size: 12px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; }
+.tile { padding: 14px 16px; }
+.tiles .tile:nth-child(4n+1) { background: var(--mizu-t); } .tiles .tile:nth-child(4n+2) { background: var(--wakatake-t); }
+.tiles .tile:nth-child(4n+3) { background: var(--yamabuki-t); } .tiles .tile:nth-child(4n+4) { background: var(--coral-t); }
+.tile .v { font-size: 25px; line-height: 1.25; margin: 2px 0; white-space: nowrap; }
+.tile .k { color: var(--text-2); font-size: 13px; }
+
+footer { margin-top: 36px; color: var(--text-2); font-size: 13px; }
+footer .train { display: block; width: 100%; max-width: 560px; height: auto; margin: 0 auto 10px; }
+.hidden { display: none !important; }
 
 /* market breadth */
-.jump { display: flex; gap: 8px; flex-wrap: wrap; margin: -8px 0 16px; }
-.jump a { text-decoration: none; }
-.big-h { font-size: 20px; letter-spacing: -0.01em; }
-.part-head { margin-top: 36px; padding-top: 16px; border-top: 1px solid var(--border); }
-.mgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 16px; }
+.jump { display: flex; gap: 10px; flex-wrap: wrap; margin: 0 0 8px; }
+.big-h { font-size: 24px; letter-spacing: 0.01em; margin: 0; }
+.part-head { margin-top: 44px; padding-top: 22px; border-top: 3px dashed var(--ink); display: flex; align-items: center; gap: 12px; }
+.mgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 18px; }
 .mgrid > .card { min-width: 0; }
 @media (min-width: 1000px) { .mgrid-wide { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); } }
 .heat th, .heat td { padding: 7px 6px; }
-.mctl { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.mctl .btn { padding: 4px 9px; font-size: 13px; }
-select.btn { padding: 5px 8px; }
-.take { background: var(--info-bg); border-radius: 10px; padding: 10px 14px; margin: 0 0 12px; }
-.tile .s { color: var(--text-3); font-size: 12px; margin-top: 2px; }
-.split { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--grid); margin-top: 8px; }
+.mctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.mctl .btn { padding: 4px 11px; font-size: 13px; }
+select.btn { padding: 5px 10px; appearance: auto; }
+.take { background: var(--yamabuki-t); border: 2.5px solid var(--ink); border-radius: 18px; padding: 12px 16px; margin: 0 0 16px; font-size: 15px; }
+.tile .s { color: var(--text-2); font-size: 13px; margin-top: 2px; }
+.split { display: flex; height: 10px; border-radius: 6px; overflow: hidden; background: var(--surface); border: 2px solid var(--ink); margin-top: 10px; }
 .split i { display: block; height: 100%; }
+.split i + i { border-left: 2px solid var(--ink); }
 .sbars svg { display: block; overflow: visible; }
-.sbars text { fill: var(--text-2); font-size: 12px; }
+.sbars text { fill: var(--text-2); font-size: 13px; }
 .sbars .row { cursor: pointer; }
-.sbars .row:hover .hit { fill: var(--surface-2); }
-.sbars .sel text.nm { fill: var(--text); font-weight: 650; }
+.sbars .row:hover .hit { fill: var(--yamabuki-t); }
+.sbars .sel text.nm { fill: var(--ink); }
 .heat td { color: var(--text); }
-tr.sel td { background: var(--surface-2); font-weight: 600; }
+tr.sel td { background: var(--yamabuki-t); }
 tr.click { cursor: pointer; }
-.tall { max-height: 520px; overflow: auto; }
+.tall { max-height: 540px; overflow: auto; }
 .tall thead th { position: sticky; top: 0; background: var(--surface); z-index: 1; }
-.search { border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 8px; padding: 6px 10px; font: inherit; width: min(100%, 260px); }
+.search { border: 2.5px solid var(--ink); background: var(--washi); color: var(--text); border-radius: 999px; padding: 6px 14px; font: inherit; width: min(100%, 280px); }
 @media (max-width: 640px) { .hide-sm { display: none; } }
 
 /* trade ideas + indicators */
-.ideas { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); gap: 12px; }
-.idea { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.idea-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
-.idea-h h2 { margin: 0; }
-.pill { font-size: 11px; font-weight: 600; border: 1px solid; border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
-.idea-ex { margin: 4px 0 0; font-size: 13px; color: var(--text-2); }
-.idea-rec { margin: 4px 0 6px; font-size: 12px; background: var(--surface-2); border-radius: 8px; padding: 6px 8px; }
-.idea-t th, .idea-t td { padding: 5px 6px; font-size: 12px; }
-.idea-t .nm { display: inline-block; max-width: 8.5em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
-.idea-t a { color: var(--text); text-decoration: none; } .idea-t a:hover { text-decoration: underline; }
-.idea .more { align-self: flex-start; margin-top: 6px; font-size: 12px; padding: 3px 8px; }
-.disclaim { background: var(--surface-2); border-radius: 10px; padding: 8px 12px; margin: 0 0 12px; font-size: 13px; color: var(--text-2); }
-.explain dt { font-weight: 650; margin-top: 10px; } .explain dd { margin: 2px 0 0; color: var(--text-2); }
-.ind-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin-top: 12px; }
-.ind-head h2 { font-size: 13px; margin: 0; }
+.ideas { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 16px; }
+.idea { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding-top: 0; overflow: hidden; }
+.idea-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 0 -20px 8px; padding: 12px 20px 10px; border-bottom: 2.5px solid var(--ink); }
+.idea-h h2 { margin: 0; font-size: 17px; }
+.idea[data-bias="bullish"] .idea-h { background: var(--wakatake); }
+.idea[data-bias="bearish"] .idea-h { background: var(--coral); }
+.idea[data-bias="caution"] .idea-h { background: var(--yamabuki); }
+.idea[data-bias="watch"] .idea-h { background: var(--mizu); }
+.pill { font-size: 12px; border: 2px solid var(--ink); border-radius: 999px; padding: 1px 9px; white-space: nowrap; background: var(--surface); color: var(--ink); }
+.idea-ex { margin: 4px 0 0; font-size: 14px; color: var(--text-2); }
+.idea-rec { margin: 6px 0 6px; font-size: 13px; background: var(--washi); border: 2px dashed var(--ink); border-radius: 12px; padding: 7px 10px; }
+.idea-t th, .idea-t td { padding: 5px 6px; font-size: 13px; }
+.idea-t a { color: var(--ink); text-decoration: none; } .idea-t a:hover { text-decoration: underline; }
+.idea .more { align-self: flex-start; margin-top: 8px; font-size: 13px; padding: 3px 11px; }
+.disclaim { background: var(--mizu-t); border: 2.5px solid var(--ink); border-radius: 18px; padding: 10px 16px; margin: 0 0 16px; font-size: 14px; color: var(--text); }
+.explain { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 12px; margin: 10px 0 0; }
+.explain > div { border: 2.5px solid var(--ink); border-radius: 16px; padding: 10px 14px; background: var(--washi); }
+.explain > div:nth-child(4n+1) { background: var(--mizu-t); } .explain > div:nth-child(4n+2) { background: var(--coral-t); }
+.explain > div:nth-child(4n+3) { background: var(--wakatake-t); } .explain > div:nth-child(4n+4) { background: var(--yamabuki-t); }
+.explain dt { font-size: 15px; } .explain dd { margin: 4px 0 0; color: var(--text-2); font-size: 14px; }
+.ind-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin-top: 14px; }
+.ind-head h2 { font-size: 15px; margin: 0; }
 
-footer { margin-top: 32px; color: var(--text-3); font-size: 12px; }
-.hidden { display: none !important; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
 <body>
+<!-- ===== Illustration sprite: small section icons (custom-drawn, flat fills, charcoal outlines) ===== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- bull face -->
+    <symbol id="i-bull" viewBox="0 0 48 48">
+      <g stroke="#3E3A39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M11 17 C5 15 4 8 7 5 C9 9 12 11 16 12" fill="#F6D27A"/>
+        <path d="M37 17 C43 15 44 8 41 5 C39 9 36 11 32 12" fill="#F6D27A"/>
+        <path d="M9 22 C9 13 16 9 24 9 C32 9 39 13 39 22 C39 33 33 42 24 42 C15 42 9 33 9 22 Z" fill="#F2A497"/>
+        <ellipse cx="24" cy="33" rx="10" ry="7" fill="#FCE6E1"/>
+      </g>
+      <g fill="#3E3A39"><circle cx="18" cy="22" r="2.2"/><circle cx="30" cy="22" r="2.2"/><circle cx="21" cy="33" r="1.6"/><circle cx="27" cy="33" r="1.6"/></g>
+    </symbol>
+    <!-- light bulb with a face -->
+    <symbol id="i-bulb" viewBox="0 0 48 48">
+      <g stroke="#3E3A39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M24 5 C14 5 9 12 9 19 C9 26 15 29 16 34 H32 C33 29 39 26 39 19 C39 12 34 5 24 5 Z" fill="#F6D27A"/>
+        <rect x="16" y="34" width="16" height="9" rx="3" fill="#A8D3E6"/>
+        <path d="M3 13 L6 14 M45 13 L42 14 M24 1 V2" fill="none"/>
+      </g>
+      <g fill="#3E3A39"><circle cx="19" cy="19" r="2"/><circle cx="29" cy="19" r="2"/></g>
+      <path d="M20 24 Q24 28 28 24" fill="none" stroke="#3E3A39" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="15" cy="24" r="2.5" fill="#F2A497"/><circle cx="33" cy="24" r="2.5" fill="#F2A497"/>
+    </symbol>
+    <!-- little houses = sectors -->
+    <symbol id="i-blocks" viewBox="0 0 48 48">
+      <g stroke="#3E3A39" stroke-width="3" stroke-linejoin="round">
+        <path d="M4 42 V24 L12 16 L20 24 V42 Z" fill="#F2A497"/>
+        <path d="M18 42 V18 L28 8 L38 18 V42 Z" fill="#A8D3E6"/>
+        <path d="M32 42 V28 L38 22 L45 28 V42 Z" fill="#B9DAA5"/>
+        <path d="M2 42 H46" fill="none" stroke-linecap="round"/>
+      </g>
+      <g fill="#FFFCF6" stroke="#3E3A39" stroke-width="2.5"><rect x="24" y="22" width="8" height="8" rx="2"/><rect x="9" y="30" width="6" height="7" rx="2"/></g>
+    </symbol>
+    <!-- clipboard scoreboard -->
+    <symbol id="i-board" viewBox="0 0 48 48">
+      <g stroke="#3E3A39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+        <rect x="8" y="7" width="32" height="37" rx="6" fill="#FFFFFF"/>
+        <rect x="16" y="3" width="16" height="8" rx="3" fill="#F6D27A"/>
+        <path d="M15 20 H26 M15 28 H30 M15 36 H22" fill="none"/>
+        <circle cx="33" cy="20" r="3" fill="#B9DAA5"/><circle cx="35" cy="36" r="3" fill="#F2A497"/>
+      </g>
+    </symbol>
+    <!-- Mt Fuji with a rising line -->
+    <symbol id="i-fuji" viewBox="0 0 48 48">
+      <g stroke="#3E3A39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+        <circle cx="37" cy="11" r="6" fill="#F6D27A"/>
+        <path d="M2 42 L19 15 Q24 10 29 15 L46 42 Z" fill="#A8D3E6"/>
+        <path d="M13 24 L19 15 Q24 10 29 15 L35 24 Q31 27 28 23 Q24 28 20 23 Q17 27 13 24 Z" fill="#FFFFFF"/>
+        <path d="M6 37 L15 33 L22 35 L33 28 L42 30" fill="none" stroke="#F2A497" stroke-width="3.5"/>
+      </g>
+    </symbol>
+    <!-- paper plane -->
+    <symbol id="i-plane" viewBox="0 0 48 48">
+      <g stroke="#3E3A39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M4 22 L44 6 L34 42 L23 30 Z" fill="#F2A497"/>
+        <path d="M23 30 L44 6 L18 27 Z" fill="#FCE6E1"/>
+        <path d="M18 27 L17 39 L23 30" fill="#F2A497"/>
+        <path d="M3 38 Q8 34 12 36" fill="none"/>
+      </g>
+    </symbol>
+    <!-- notebook -->
+    <symbol id="i-book" viewBox="0 0 48 48">
+      <g stroke="#3E3A39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+        <rect x="8" y="5" width="32" height="39" rx="6" fill="#A8D3E6"/>
+        <rect x="15" y="12" width="19" height="11" rx="3" fill="#FFFFFF"/>
+        <path d="M8 13 H4 M8 22 H4 M8 31 H4 M8 40 H4" fill="none"/>
+      </g>
+      <path d="M19 31 H33 M19 37 H28" stroke="#3E3A39" stroke-width="2.5" stroke-linecap="round"/>
+    </symbol>
+    <!-- magnifying glass over candles -->
+    <symbol id="i-loupe" viewBox="0 0 48 48">
+      <g stroke="#3E3A39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M31 31 L43 43" fill="none" stroke-width="5"/>
+        <circle cx="20" cy="20" r="15" fill="#FFFFFF"/>
+      </g>
+      <g stroke="#3E3A39" stroke-width="2.5" stroke-linejoin="round">
+        <path d="M14 11 V29 M22 9 V27 M28 14 V26" fill="none"/>
+        <rect x="11" y="15" width="6" height="9" rx="1.5" fill="#B9DAA5"/>
+        <rect x="19" y="13" width="6" height="8" rx="1.5" fill="#F2A497"/>
+        <rect x="25.5" y="17" width="5" height="6" rx="1.5" fill="#B9DAA5"/>
+      </g>
+    </symbol>
+    <!-- maneki-neko (lucky cat) holding a "7" coin -->
+    <symbol id="i-cat" viewBox="0 0 48 48">
+      <g stroke="#3E3A39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M33 22 C35 17 37 12 37 8 C40 9 42 13 41 18" fill="#FFFFFF"/>
+        <path d="M10 44 C8 34 10 26 16 23 H32 C38 26 40 34 38 44 Z" fill="#FFFFFF"/>
+        <path d="M10 16 L9 4 L18 10 H30 L39 4 L38 16 C40 23 34 28 24 28 C14 28 8 23 10 16 Z" fill="#FFFFFF"/>
+        <circle cx="24" cy="36" r="6.5" fill="#F6D27A"/>
+      </g>
+      <path d="M11 8 L11.5 13 L15 10.5 Z M37 8 L36.5 13 L33 10.5 Z" fill="#F2A497"/>
+      <g fill="#3E3A39"><circle cx="19" cy="18" r="2"/><circle cx="29" cy="18" r="2"/></g>
+      <path d="M22 22 Q24 24 26 22" fill="none" stroke="#3E3A39" stroke-width="2" stroke-linecap="round"/>
+      <path d="M21.5 33 H26.5 L23 40" fill="none" stroke="#3E3A39" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M14 26 Q24 31 34 26" fill="none" stroke="#F2A497" stroke-width="3"/>
+    </symbol>
+    <!-- paper lantern (chochin) -->
+    <symbol id="i-lantern" viewBox="0 0 48 48">
+      <g stroke="#3E3A39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M24 2 V6" fill="none"/>
+        <rect x="16" y="6" width="16" height="5" rx="2" fill="#3E3A39"/>
+        <ellipse cx="24" cy="25" rx="15" ry="14" fill="#F2A497"/>
+        <path d="M10 21 H38 M10 29 H38" fill="none" stroke-width="2.5"/>
+        <rect x="16" y="38" width="16" height="5" rx="2" fill="#3E3A39"/>
+        <path d="M24 43 V47" fill="none"/>
+      </g>
+    </symbol>
+    <!-- thermometer-ish bars -->
+    <symbol id="i-bars" viewBox="0 0 48 48">
+      <g stroke="#3E3A39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+        <rect x="5" y="22" width="10" height="20" rx="3" fill="#A8D3E6"/>
+        <rect x="19" y="12" width="10" height="30" rx="3" fill="#B9DAA5"/>
+        <rect x="33" y="28" width="10" height="14" rx="3" fill="#F2A497"/>
+        <path d="M2 34 H46" fill="none" stroke="#E8B740" stroke-dasharray="4 4"/>
+      </g>
+    </symbol>
+    <!-- candlestick chart card -->
+    <symbol id="i-chart" viewBox="0 0 48 48">
+      <g stroke="#3E3A39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+        <rect x="3" y="6" width="42" height="36" rx="8" fill="#FFFFFF"/>
+        <path d="M14 13 V35 M24 16 V33 M34 11 V29" fill="none" stroke-width="2.5"/>
+        <rect x="11" y="18" width="6" height="11" rx="1.5" fill="#B9DAA5" stroke-width="2.5"/>
+        <rect x="21" y="20" width="6" height="8" rx="1.5" fill="#F2A497" stroke-width="2.5"/>
+        <rect x="31" y="15" width="6" height="9" rx="1.5" fill="#B9DAA5" stroke-width="2.5"/>
+      </g>
+    </symbol>
+    <!-- hourglass -->
+    <symbol id="i-hourglass" viewBox="0 0 48 48">
+      <g stroke="#3E3A39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M14 7 H34 C34 17 27 20 24 24 C27 28 34 31 34 41 H14 C14 31 21 28 24 24 C21 20 14 17 14 7 Z" fill="#E3F1F7"/>
+        <path d="M18 39 C19 33 22 31 24 30 C26 31 29 33 30 39 Z" fill="#F6D27A" stroke-width="2.5"/>
+        <path d="M19 13 H29 C28 16 26 18 24 19 C22 18 20 16 19 13 Z" fill="#F6D27A" stroke-width="2.5"/>
+        <rect x="9" y="3" width="30" height="5" rx="2.5" fill="#F2A497"/>
+        <rect x="9" y="40" width="30" height="5" rx="2.5" fill="#F2A497"/>
+      </g>
+    </symbol>
+  </defs>
+</svg>
 <div class="wrap">
-  <header>
-    <div>
+  <header class="hero">
+    <div class="hero-text">
+      <span class="kicker">Daily market picture book</span>
       <h1>Market &amp; Mag 7 Dashboard</h1>
       <p class="sub" id="asof">Loading…</p>
+      <nav class="jump hbtn"><a class="btn" href="#market">Market breadth</a><a class="btn" href="#ideas">Trade ideas</a><a class="btn" href="#mag7">Mag 7 dips</a></nav>
     </div>
-    <button class="btn" id="themeBtn" type="button">Theme: auto</button>
+    <!-- Hero scene: the exchange on a green hill, a cheerful bull, a sleepy bear, Mt Fuji and a smiling sun -->
+    <svg class="hero-art" viewBox="0 0 640 270" role="img" aria-label="Illustration: a stock exchange building on a green hill with a happy bull, a sleeping bear, Mount Fuji and a smiling sun">
+      <g stroke="#3E3A39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+        <!-- clouds -->
+        <path d="M60 70 Q60 52 78 54 Q86 38 104 46 Q122 40 126 58 Q142 60 138 72 Z" fill="#FFFFFF"/>
+        <path d="M330 44 Q330 30 344 32 Q352 20 366 28 Q380 24 382 38 Q394 40 390 50 H330 Z" fill="#E3F1F7"/>
+        <!-- sun -->
+        <g>
+          <path d="M572 14 V4 M600 28 L608 20 M612 56 H622 M544 28 L536 20 M600 86 L608 94 M544 86 L536 94" fill="none"/>
+          <circle cx="572" cy="57" r="31" fill="#F6D27A"/>
+        </g>
+        <!-- Mt Fuji -->
+        <path d="M398 222 L498 104 Q510 92 522 104 L630 222 Z" fill="#A8D3E6"/>
+        <path d="M470 137 L498 104 Q510 92 522 104 L551 137 Q540 146 530 136 Q520 148 510 136 Q499 148 490 136 Q480 146 470 137 Z" fill="#FFFFFF"/>
+        <!-- candles on the hillside -->
+        <path d="M424 150 V196 M444 138 V188 M464 128 V178" fill="none" stroke-width="2.5"/>
+        <rect x="417" y="160" width="14" height="26" rx="3" fill="#F2A497"/>
+        <rect x="437" y="146" width="14" height="30" rx="3" fill="#B9DAA5"/>
+        <rect x="457" y="134" width="14" height="30" rx="3" fill="#B9DAA5"/>
+        <!-- ground -->
+        <path d="M-6 280 C14 248 34 222 70 208 C150 192 260 220 380 202 C480 188 560 200 650 190 L650 280 Z" fill="#B9DAA5"/>
+        <path d="M24 280 C40 262 70 246 130 242 C260 236 330 250 420 240 C520 232 580 240 650 236 L650 280 Z" fill="#E9F3E2"/>
+        <!-- exchange building -->
+        <path d="M322 70 V40" fill="none"/>
+        <path d="M322 40 L352 48 L322 56 Z" fill="#F2A497"/>
+        <path d="M240 118 L322 72 L404 118 Z" fill="#F6D27A"/>
+        <path d="M304 106 L316 96 L326 102 L340 90" fill="none" stroke-width="2.5"/>
+        <rect x="244" y="118" width="156" height="14" rx="3" fill="#FFFFFF"/>
+        <g fill="#FFFFFF">
+          <rect x="256" y="132" width="13" height="62" rx="3"/><rect x="280" y="132" width="13" height="62" rx="3"/>
+          <rect x="304" y="132" width="13" height="62" rx="3"/><rect x="328" y="132" width="13" height="62" rx="3"/>
+          <rect x="352" y="132" width="13" height="62" rx="3"/><rect x="376" y="132" width="13" height="62" rx="3"/>
+        </g>
+        <rect x="238" y="194" width="168" height="12" rx="3" fill="#FFFFFF"/>
+        <rect x="230" y="206" width="184" height="12" rx="3" fill="#FFFFFF"/>
+        <!-- bull -->
+        <path d="M108 198 Q96 186 104 176" fill="none"/>
+        <rect x="118" y="206" width="12" height="22" rx="5" fill="#F2A497"/>
+        <rect x="170" y="206" width="12" height="22" rx="5" fill="#F2A497"/>
+        <ellipse cx="150" cy="194" rx="46" ry="27" fill="#F2A497"/>
+        <rect x="134" y="208" width="12" height="22" rx="5" fill="#F2A497"/>
+        <rect x="156" y="208" width="12" height="22" rx="5" fill="#F2A497"/>
+        <path d="M180 150 C172 146 170 136 174 130 C176 138 182 141 188 142" fill="#F6D27A"/>
+        <path d="M222 150 C230 146 232 136 228 130 C226 138 220 141 214 142" fill="#F6D27A"/>
+        <path d="M176 164 C176 150 188 142 201 142 C214 142 226 150 226 164 C226 180 216 190 201 190 C186 190 176 180 176 164 Z" fill="#F2A497"/>
+        <ellipse cx="201" cy="179" rx="16" ry="10" fill="#FCE6E1"/>
+        <!-- up-arrow balloon -->
+        <path d="M150 166 Q146 140 132 122" fill="none" stroke-width="2"/>
+        <path d="M132 120 C116 120 110 104 114 94 C118 82 130 78 140 84 C150 90 150 106 140 114 Z" fill="#B9DAA5"/>
+        <path d="M128 106 L132 94 L137 106 M132 94 V112" fill="none" stroke-width="2.5"/>
+        <!-- sleepy bear peeking behind the hill -->
+        <circle cx="560" cy="200" r="11" fill="#A8D3E6"/>
+        <circle cx="604" cy="200" r="11" fill="#A8D3E6"/>
+        <path d="M552 236 C552 214 566 202 582 202 C598 202 612 214 612 236 Z" fill="#A8D3E6"/>
+        <ellipse cx="582" cy="226" rx="10" ry="7" fill="#FFFFFF"/>
+      </g>
+      <!-- faces and small details (no outline) -->
+      <g fill="#3E3A39">
+        <circle cx="192" cy="161" r="3"/><circle cx="210" cy="161" r="3"/>
+        <circle cx="196" cy="179" r="2"/><circle cx="206" cy="179" r="2"/>
+        <circle cx="582" cy="223" r="2.5"/>
+        <circle cx="562" cy="50" r="3"/><circle cx="582" cy="50" r="3"/>
+      </g>
+      <g fill="#F2A497"><circle cx="555" cy="62" r="5"/><circle cx="589" cy="62" r="5"/></g>
+      <circle cx="184" cy="172" r="4" fill="#FCE6E1"/><circle cx="218" cy="172" r="4" fill="#FCE6E1"/>
+      <g fill="none" stroke="#3E3A39" stroke-width="2.5" stroke-linecap="round">
+        <path d="M564 64 Q572 72 580 64"/>
+        <path d="M569 216 Q573 220 577 216 M587 216 Q591 220 595 216"/>
+        <path d="M614 186 H624 L614 196 H624 M626 168 H633 L626 175 H633" stroke-width="2"/>
+      </g>
+    </svg>
   </header>
 
   <div id="sampleBanner" class="banner hidden"><strong>Sample data in the Mag 7 section.</strong> Those prices are randomly generated for testing; real data appears after the first GitHub Actions run. The market breadth section uses real prices.</div>
   <div id="errBanner" class="banner hidden"></div>
 
-  <nav class="jump"><a class="btn" href="#market">S&amp;P 500 market breadth</a><a class="btn" href="#ideas">Trade ideas</a><a class="btn" href="#mag7">Mag 7 dip strategy</a></nav>
 
   <!-- ===================== MARKET BREADTH (market.json) ===================== -->
   <div id="market">
     <section>
       <div class="sec-head">
-        <div><h2 class="big-h">S&amp;P 500 market breadth</h2><span class="muted" id="mAsof">Loading market data…</span></div>
+        <div class="sec-title"><svg class="ico" aria-hidden="true"><use href="#i-bull"/></svg><div><h2 class="big-h">S&amp;P 500 market breadth</h2><span class="muted" id="mAsof">Loading market data…</span></div></div>
         <div class="mctl"><div class="mctl" id="mPeriods"></div><select class="btn" id="mGroup" aria-label="Sector"></select></div>
       </div>
       <p class="take hidden" id="mTake"></p>
@@ -205,29 +461,29 @@ footer { margin-top: 32px; color: var(--text-3); font-size: 12px; }
     </section>
 
     <section id="ideas">
-      <div class="sec-head"><div><h2 class="big-h" style="font-size:18px">Trade ideas · technical setups</h2><span class="muted" id="mIdeasNote"></span></div></div>
+      <div class="sec-head"><div class="sec-title"><svg class="ico" aria-hidden="true"><use href="#i-bulb"/></svg><div><h2 class="big-h">Trade ideas · technical setups</h2><span class="muted" id="mIdeasNote"></span></div></div></div>
       <p class="disclaim"><strong>Screens, not recommendations.</strong> Each list is simply the stocks whose chart matches a common rule today. The "past record" line shows how often stocks with that signal were higher a month later, compared with any stock on any day. Past patterns often fail, so treat these as starting points for your own research.</p>
       <div class="ideas" id="mIdeas"></div>
     </section>
 
     <section class="mgrid mgrid-wide">
       <div class="card">
-        <div class="sec-head"><div><h2>Rising vs falling by sector</h2><span class="muted" id="mBarsNote"></span></div></div>
+        <div class="sec-head"><div class="sec-title"><svg class="ico-sm" aria-hidden="true"><use href="#i-blocks"/></svg><div><h2>Rising vs falling by sector</h2><span class="muted" id="mBarsNote"></span></div></div></div>
         <div class="sbars" id="mBars"></div>
       </div>
       <div class="card">
-        <div class="sec-head"><div><h2>Sector fund returns</h2><span class="muted">SPDR sector ETFs · deeper colour = bigger move · click a sector row to focus on it</span></div></div>
+        <div class="sec-head"><div class="sec-title"><svg class="ico-sm" aria-hidden="true"><use href="#i-chart"/></svg><div><h2>Sector fund returns</h2><span class="muted">SPDR sector ETFs · deeper colour = bigger move · click a sector row to focus on it</span></div></div></div>
         <div class="tbl-wrap"><table class="heat" id="mHeat"></table></div>
       </div>
     </section>
 
     <section class="card">
-      <div class="sec-head"><div><h2>Sector scoreboard</h2><span class="muted" id="mScoreNote"></span></div></div>
+      <div class="sec-head"><div class="sec-title"><svg class="ico-sm" aria-hidden="true"><use href="#i-board"/></svg><div><h2>Sector scoreboard</h2><span class="muted" id="mScoreNote"></span></div></div></div>
       <div class="tbl-wrap"><table id="mScore"></table></div>
     </section>
 
     <section class="card">
-      <div class="sec-head"><div><h2>Breadth over time · <span class="mGname">S&amp;P 500</span></h2><span class="muted">Last 12 months</span></div></div>
+      <div class="sec-head"><div class="sec-title"><svg class="ico-sm" aria-hidden="true"><use href="#i-fuji"/></svg><div><h2>Breadth over time · <span class="mGname">S&amp;P 500</span></h2><span class="muted">Last 12 months</span></div></div></div>
       <div class="mgrid">
         <div>
           <h2 id="mPriceTitle" style="font-size:14px">Price</h2>
@@ -240,24 +496,24 @@ footer { margin-top: 32px; color: var(--text-3); font-size: 12px; }
         </div>
       </div>
       <h2 style="font-size:14px;margin-top:16px">Rising minus falling stocks, each day (last 6 months)</h2>
-      <p class="muted" style="margin:0 0 6px">Blue when more stocks rose than fell, red when more fell. A rising index with mostly red bars is a narrow rally.</p>
+      <p class="muted" style="margin:0 0 6px">Green when more stocks rose than fell, coral when more fell. A rising index with mostly coral bars is a narrow rally.</p>
       <div class="chart-box" style="height:200px"><canvas id="mNetChart" aria-label="Daily net advancers" role="img"></canvas></div>
     </section>
 
     <section class="mgrid">
       <div class="card">
-        <div class="sec-head"><div><h2>Biggest gainers · <span class="mPname">1 day</span></h2><span class="muted mGname2">S&amp;P 500</span></div></div>
+        <div class="sec-head"><div class="sec-title"><svg class="ico-sm" aria-hidden="true"><use href="#i-plane"/></svg><div><h2>Biggest gainers · <span class="mPname">1 day</span></h2><span class="muted mGname2">S&amp;P 500</span></div></div></div>
         <div class="tbl-wrap"><table id="mUp"></table></div>
       </div>
       <div class="card">
-        <div class="sec-head"><div><h2>Biggest losers · <span class="mPname">1 day</span></h2><span class="muted mGname2">S&amp;P 500</span></div></div>
+        <div class="sec-head"><div class="sec-title"><svg class="ico-sm" aria-hidden="true" style="transform:rotate(95deg)"><use href="#i-plane"/></svg><div><h2>Biggest losers · <span class="mPname">1 day</span></h2><span class="muted mGname2">S&amp;P 500</span></div></div></div>
         <div class="tbl-wrap"><table id="mDown"></table></div>
       </div>
     </section>
 
     <section class="card">
       <div class="sec-head">
-        <div><h2>All stocks · <span class="mGname">S&amp;P 500</span></h2><span class="muted" id="mAllNote"></span></div>
+        <div class="sec-title"><svg class="ico-sm" aria-hidden="true"><use href="#i-book"/></svg><div><h2>All stocks · <span class="mGname">S&amp;P 500</span></h2><span class="muted" id="mAllNote"></span></div></div>
         <input class="search" id="mSearch" type="search" placeholder="Search ticker or company" aria-label="Search stocks">
       </div>
       <div class="tbl-wrap tall"><table id="mAll"></table></div>
@@ -265,28 +521,28 @@ footer { margin-top: 32px; color: var(--text-3); font-size: 12px; }
   </div>
 
   <section class="card" id="indicators-explained">
-    <h2>How to read the indicators</h2>
+    <div class="sec-title"><svg class="ico-sm" aria-hidden="true"><use href="#i-loupe"/></svg><h2 style="margin:0">How to read the indicators</h2></div>
     <dl class="explain">
-      <dt>RSI (Relative Strength Index, 14 days)</dt>
-      <dd>A 0–100 score of how strongly the price has moved up vs down lately. Above 70 = "overbought" (risen fast, may cool off); below 30 = "oversold" (fallen fast, may bounce). In strong trends it can stay extreme for a long time.</dd>
-      <dt>MACD (12, 26, 9)</dt>
-      <dd>The gap between a fast (12-day) and slow (26-day) average of the price. When the MACD line crosses above its 9-day signal line, momentum is turning up; crossing below, turning down. The bars (histogram) show the distance between the two.</dd>
-      <dt>Bollinger Bands (20 days, 2 standard deviations)</dt>
-      <dd>A band around the 20-day average that widens when the price is jumpy and narrows when it's calm. Price near the upper band = high vs its recent range; near the lower band = low. %B puts this on a scale: 0 = lower band, 1 = upper band. A "squeeze" (very narrow bands) often comes before a bigger move.</dd>
-      <dt>200-day average</dt>
-      <dd>Used as the long-term trend filter: price above it = uptrend, below = downtrend.</dd>
-      <dt>Past record</dt>
-      <dd>For every time a setup appeared in the test period, we check whether the stock was higher 21 trading days (~1 month) later. "All stocks" is the same check on every stock and every day, so you can see whether the setup actually added anything. It only uses today's S&amp;P 500 members (so it ignores companies that dropped out) and doesn't include fees.</dd>
+      <div><dt>RSI (Relative Strength Index, 14 days)</dt>
+      <dd>A 0–100 score of how strongly the price has moved up vs down lately. Above 70 = "overbought" (risen fast, may cool off); below 30 = "oversold" (fallen fast, may bounce). In strong trends it can stay extreme for a long time.</dd></div>
+      <div><dt>MACD (12, 26, 9)</dt>
+      <dd>The gap between a fast (12-day) and slow (26-day) average of the price. When the MACD line crosses above its 9-day signal line, momentum is turning up; crossing below, turning down. The bars (histogram) show the distance between the two.</dd></div>
+      <div><dt>Bollinger Bands (20 days, 2 standard deviations)</dt>
+      <dd>A band around the 20-day average that widens when the price is jumpy and narrows when it's calm. Price near the upper band = high vs its recent range; near the lower band = low. %B puts this on a scale: 0 = lower band, 1 = upper band. A "squeeze" (very narrow bands) often comes before a bigger move.</dd></div>
+      <div><dt>200-day average</dt>
+      <dd>Used as the long-term trend filter: price above it = uptrend, below = downtrend.</dd></div>
+      <div><dt>Past record</dt>
+      <dd>For every time a setup appeared in the test period, we check whether the stock was higher 21 trading days (~1 month) later. "All stocks" is the same check on every stock and every day, so you can see whether the setup actually added anything. It only uses today's S&amp;P 500 members (so it ignores companies that dropped out) and doesn't include fees.</dd></div>
     </dl>
   </section>
 
-  <h2 class="big-h part-head" id="mag7">Mag 7 dip strategy</h2>
+  <h2 class="big-h part-head" id="mag7"><svg class="ico" aria-hidden="true"><use href="#i-cat"/></svg>Mag 7 dip strategy</h2>
 
 
   <!-- 1. Today's signals -->
   <section>
     <div class="sec-head">
-      <div><h2>Today's dip signals</h2><span class="muted" id="ruleText"></span></div>
+      <div class="sec-title"><svg class="ico-sm" aria-hidden="true"><use href="#i-lantern"/></svg><div><h2>Today's dip signals</h2><span class="muted" id="ruleText"></span></div></div>
     </div>
     <div class="cards" id="cards"></div>
   </section>
@@ -294,15 +550,15 @@ footer { margin-top: 32px; color: var(--text-3); font-size: 12px; }
   <!-- 2. Weekly change vs trigger -->
   <section class="card">
     <div class="sec-head">
-      <div><h2>How close is each stock to the trigger?</h2>
-      <span class="muted">5-day price change. The buy rule fires when a bar crosses the trigger line.</span></div>
+      <div class="sec-title"><svg class="ico-sm" aria-hidden="true"><use href="#i-bars"/></svg><div><h2>How close is each stock to the trigger?</h2>
+      <span class="muted">5-day price change. The buy rule fires when a bar crosses the trigger line.</span></div></div>
     </div>
     <div class="bars" id="bars"></div>
   </section>
 
   <!-- 3. Overview table -->
   <section class="card">
-    <div class="sec-head"><div><h2>Overview</h2><span class="muted">Click a column to sort · click a row to open it</span></div></div>
+    <div class="sec-head"><div class="sec-title"><svg class="ico-sm" aria-hidden="true"><use href="#i-board"/></svg><div><h2>Overview</h2><span class="muted">Click a column to sort · click a row to open it</span></div></div></div>
     <div class="tbl-wrap"><table id="overview"></table></div>
   </section>
 
@@ -319,7 +575,7 @@ footer { margin-top: 32px; color: var(--text-3); font-size: 12px; }
           <span><i style="background:var(--s1)"></i>Price</span>
           <span><i style="background:var(--s2)"></i>50-day average</span>
           <span><i style="background:var(--s3)"></i>200-day average</span>
-          <span><i style="background:var(--text-3)"></i>Bollinger Bands</span>
+          <span><i style="background:var(--mizu);height:10px;border:2px solid var(--text-3)"></i>Bollinger Bands</span>
           <span id="legTri"><i class="tri"></i>Dip buy (backtest)</span>
         </div>
         <div class="chart-box"><canvas id="priceChart" aria-label="Price chart" role="img"></canvas></div>
@@ -347,12 +603,12 @@ footer { margin-top: 32px; color: var(--text-3); font-size: 12px; }
 
   <!-- 5. Strategy backtest -->
   <section class="card">
-    <div class="sec-head"><div><h2>Strategy backtest (all Mag 7)</h2><span class="muted" id="btRule"></span></div></div>
+    <div class="sec-head"><div class="sec-title"><svg class="ico-sm" aria-hidden="true"><use href="#i-hourglass"/></svg><div><h2>Strategy backtest (all Mag 7)</h2><span class="muted" id="btRule"></span></div></div></div>
     <div class="tiles" id="tiles"></div>
     <h2 style="margin-top:18px">Average trade return vs SPY over the same dates</h2>
     <div class="legend">
-      <span><i style="background:var(--s1);height:10px;width:10px"></i>Dip trade</span>
-      <span><i style="background:var(--s2);height:10px;width:10px"></i>SPY, same dates</span>
+      <span><i style="background:var(--mizu);height:12px;width:12px;border:2px solid var(--ink)"></i>Dip trade</span>
+      <span><i style="background:var(--s2);height:12px;width:12px;border:2px solid var(--ink)"></i>SPY, same dates</span>
     </div>
     <div class="chart-box" style="height:280px"><canvas id="btChart" aria-label="Backtest comparison chart" role="img"></canvas></div>
     <h2 style="margin-top:18px">Most recent trades</h2>
@@ -360,6 +616,35 @@ footer { margin-top: 32px; color: var(--text-3); font-size: 12px; }
   </section>
 
   <footer>
+    <!-- little train carrying coins along the bottom of the page -->
+    <svg class="train" viewBox="0 0 560 90" role="img" aria-label="Illustration: a little train carrying gold coins">
+      <g stroke="#3E3A39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M6 80 H554" fill="none"/>
+        <path d="M30 86 V80 M90 86 V80 M150 86 V80 M210 86 V80 M270 86 V80 M330 86 V80 M390 86 V80 M450 86 V80 M510 86 V80" fill="none" stroke-width="2.5"/>
+        <!-- wagons -->
+        <rect x="60" y="40" width="96" height="30" rx="8" fill="#B9DAA5"/>
+        <rect x="176" y="40" width="96" height="30" rx="8" fill="#A8D3E6"/>
+        <path d="M156 56 H176 M272 56 H292" fill="none"/>
+        <!-- coins -->
+        <circle cx="86" cy="36" r="11" fill="#F6D27A"/><circle cx="110" cy="32" r="11" fill="#F6D27A"/><circle cx="132" cy="37" r="10" fill="#F6D27A"/>
+        <circle cx="204" cy="36" r="11" fill="#F6D27A"/><circle cx="228" cy="32" r="11" fill="#F6D27A"/><circle cx="250" cy="37" r="10" fill="#F6D27A"/>
+        <!-- locomotive -->
+        <rect x="292" y="34" width="100" height="36" rx="10" fill="#F2A497"/>
+        <rect x="350" y="12" width="44" height="40" rx="8" fill="#F2A497"/>
+        <rect x="358" y="20" width="28" height="16" rx="5" fill="#FFFFFF"/>
+        <rect x="306" y="16" width="16" height="20" rx="4" fill="#3E3A39"/>
+        <path d="M296 8 Q302 2 310 6 Q316 0 324 4" fill="none" stroke-width="2.5"/>
+        <!-- wheels -->
+        <circle cx="82" cy="72" r="8" fill="#FFFFFF"/><circle cx="134" cy="72" r="8" fill="#FFFFFF"/>
+        <circle cx="198" cy="72" r="8" fill="#FFFFFF"/><circle cx="250" cy="72" r="8" fill="#FFFFFF"/>
+        <circle cx="316" cy="70" r="10" fill="#FFFFFF"/><circle cx="368" cy="70" r="10" fill="#FFFFFF"/>
+      </g>
+      <g fill="#3E3A39" font-family="Huninn, sans-serif" font-size="12" text-anchor="middle">
+        <text x="110" y="36">$</text><text x="228" y="36">$</text>
+      </g>
+      <g fill="#3E3A39"><circle cx="366" cy="28" r="2.2"/><circle cx="378" cy="28" r="2.2"/></g>
+      <circle cx="362" cy="33" r="2.5" fill="#F2A497"/><circle cx="382" cy="33" r="2.5" fill="#F2A497"/>
+    </svg>
     <p><strong>Not financial advice.</strong> A personal learning project. Backtests use past prices and ignore fees, taxes and slippage; past results don't predict future returns. Prices from Yahoo Finance (via yfinance), which can be delayed or wrong. AI summaries are generated by a language model from headlines and can be inaccurate.</p>
     <p>Market breadth: "rising" means a stock's close is higher than at the start of the period, "falling" lower; returns are price changes without dividends. The median stock is the middle one when all are lined up from worst to best. S&amp;P 500 members and GICS sectors come from the open <a href="https://github.com/datasets/s-and-p-500-companies">datasets/s-and-p-500-companies</a> list.</p>
   </footer>
@@ -377,23 +662,11 @@ const badge = (s) => `<span class="badge ${s}"><span class="dot"></span>${LABELS
 
 let DATA, current, range = 252, priceChart, btChart;
 
-/* ---------- theme toggle (auto → light → dark) ---------- */
-const THEMES = ["auto", "light", "dark"];
-let theme = "auto";
-try { theme = localStorage.getItem("theme") || "auto"; } catch (e) {}
+/* ---------- theme: light only (picture-book style) ---------- */
 function applyTheme() {
-  if (theme === "auto") document.documentElement.removeAttribute("data-theme");
-  else document.documentElement.setAttribute("data-theme", theme);
-  $("themeBtn").textContent = "Theme: " + theme;
   if (DATA) { renderBars(); renderDetail(); renderBtChart(); }
   if (typeof MKT !== "undefined" && MKT) { mRenderBars(); mRenderCharts(); }
 }
-$("themeBtn").onclick = () => {
-  theme = THEMES[(THEMES.indexOf(theme) + 1) % 3];
-  try { localStorage.setItem("theme", theme); } catch (e) {}
-  applyTheme();
-};
-matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => theme === "auto" && applyTheme());
 
 /* ---------- load ---------- */
 fetch("data.json?t=" + Date.now())
@@ -451,7 +724,7 @@ function renderBars() {
     const x0 = x(Math.min(0, r.v)), w = Math.max(2, Math.abs(x(r.v) - x(0)));
     const col = r.v >= 0 ? css("--up") : css("--down");
     svg += `<text x="${left - 8}" y="${y + h / 2 + 4}" text-anchor="end" class="${r.bench ? "" : "lbl"}">${r.k}</text>`;
-    svg += `<rect class="bar" x="${x0}" y="${y}" width="${w}" height="${h}" rx="4" fill="${col}" opacity="${r.bench ? 0.55 : 1}"><title>${r.k}: ${pct(r.v)} over 5 days</title></rect>`;
+    svg += `<rect class="bar" x="${x0}" y="${y}" width="${w}" height="${h}" rx="6" fill="${col}" stroke="${css("--s1")}" stroke-width="2" opacity="${r.bench ? 0.6 : 1}"><title>${r.k}: ${pct(r.v)} over 5 days</title></rect>`;
     const lx = r.v >= 0 ? x(r.v) + 6 : x(r.v) - 6;
     svg += `<text x="${lx}" y="${y + h / 2 + 4}" text-anchor="${r.v >= 0 ? "start" : "end"}" class="num">${pct(r.v)}</text>`;
   });
@@ -514,12 +787,14 @@ const crosshair = {
 function chartDefaults() {
   Chart.defaults.color = css("--text-2");
   Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
-  Chart.defaults.font.size = 12;
+  Chart.defaults.font.size = 13;
+  Chart.defaults.elements.line.borderCapStyle = "round";
+  Chart.defaults.elements.line.borderJoinStyle = "round";
 }
 function tooltipStyle() {
   return {
-    backgroundColor: css("--surface"), titleColor: css("--text"), bodyColor: css("--text-2"),
-    borderColor: css("--border"), borderWidth: 1, padding: 10, boxPadding: 4, usePointStyle: true,
+    backgroundColor: "#FFFCF6", titleColor: "#3E3A39", bodyColor: "#615A57",
+    borderColor: css("--s1"), borderWidth: 2, cornerRadius: 12, padding: 10, boxPadding: 4, usePointStyle: true,
   };
 }
 
@@ -597,7 +872,7 @@ function drawPrice(s, ind) {
         line("200-day avg", 3, css("--s3"), 1.5),
         { label: "Upper band", data: ind.up.slice(-range), borderColor: css("--text-3"), borderDash: [4, 3], borderWidth: 1, pointRadius: 0, pointHoverRadius: 0, tension: 0, spanGaps: true, fill: false },
         { label: "Lower band", data: ind.lo.slice(-range), borderColor: css("--text-3"), borderDash: [4, 3], borderWidth: 1, pointRadius: 0, pointHoverRadius: 0, tension: 0, spanGaps: true,
-          fill: "-1", backgroundColor: css("--s1") + "12" },
+          fill: "-1", backgroundColor: "rgba(168, 211, 230, 0.35)" },
         { label: "Dip buy", data: buys, showLine: false, pointStyle: "triangle", pointRadius: 7, pointHoverRadius: 9,
           backgroundColor: css("--text"), borderColor: surface, borderWidth: 2 },
       ],
@@ -672,7 +947,7 @@ function drawIndicators(s, ind, n) {
   macdChart = new Chart($("macdChart"), { type: "bar",
     data: { labels, datasets: [
       ln("MACD", cut(ind.macd), css("--s1"), 2), ln("Signal", cut(ind.sig), css("--s2"), 1.5),
-      { type: "bar", label: "Histogram", data: hist, backgroundColor: hist.map((v) => v >= 0 ? css("--up") : css("--down")), borderWidth: 0, barPercentage: 1, categoryPercentage: 0.9 }] },
+      { type: "bar", label: "Histogram", data: hist, backgroundColor: hist.map((v) => v >= 0 ? css("--up") : css("--down")), borderColor: css("--s1"), borderWidth: 1, barPercentage: 1, categoryPercentage: 0.9 }] },
     options: { ...base, plugins: { ...base.plugins, tooltip: { ...tooltipStyle(), callbacks: { label: (c) => ` ${c.dataset.label}: ${c.raw == null ? "—" : c.raw.toFixed(2)}` } } },
       scales: { x, y: { border: { display: false }, grid: { color: (c) => c.tick.value === 0 ? css("--text-3") : css("--grid") } } } }, plugins: [crosshair] });
 }
@@ -703,11 +978,11 @@ function renderBtChart() {
   const keys = DATA.order.filter((k) => !DATA.stocks[k].benchmark && DATA.stocks[k].backtest?.trades);
   const bar = (label, f, color) => ({
     label, data: keys.map((k) => f(DATA.stocks[k].backtest) * 100), backgroundColor: color,
-    borderRadius: 4, borderSkipped: false, maxBarThickness: 22, categoryPercentage: 0.7, barPercentage: 0.85,
+    borderColor: css("--s1"), borderWidth: 2, borderRadius: 6, borderSkipped: false, maxBarThickness: 26, categoryPercentage: 0.7, barPercentage: 0.85,
   });
   const cfg = {
     type: "bar",
-    data: { labels: keys, datasets: [bar("Dip trade (avg)", (b) => b.avg_return, css("--s1")), bar("SPY same dates (avg)", (b) => b.avg_spy_return ?? 0, css("--s2"))] },
+    data: { labels: keys, datasets: [bar("Dip trade (avg)", (b) => b.avg_return, css("--mizu")), bar("SPY same dates (avg)", (b) => b.avg_spy_return ?? 0, css("--s2"))] },
     options: {
       responsive: true, maintainAspectRatio: false, animation: false,
       interaction: { mode: "index", intersect: false },
@@ -778,14 +1053,14 @@ function mRenderTiles() {
   const gap = (med ?? 0) - (ichg ?? 0);
   $("mTiles").innerHTML = [
     tile(fmtChg(ichg), `${label} · ${MP[p]}`, `${esc(etf.name || "")} at ${(etf.price ?? 0).toLocaleString("en-US", { maximumFractionDigits: 2 })}`, cls(ichg)),
-    tile(`<span class="chg-up">${num(up)}</span> <span style="font-size:13px;color:var(--text-3)">up</span> · <span class="chg-down">${num(dn)}</span> <span style="font-size:13px;color:var(--text-3)">down</span>`,
+    tile(`<span class="chg-up">${num(up)}<span style="font-size:15px"> ▲</span></span> <span style="color:var(--text-3)">·</span> <span class="chg-down">${num(dn)}<span style="font-size:15px"> ▼</span></span>`,
          `Stocks rising vs falling · ${MP[p]}`, `${p0(up / ((up + dn) || 1))} of ${row.stocks} stocks rose`, "",
          `<div class="split"><i style="width:${up / ((up + dn) || 1) * 100}%;background:var(--up)"></i><i style="width:${dn / ((up + dn) || 1) * 100}%;background:var(--down)"></i></div>`),
     tile(fmtChg(med), `Median stock · ${MP[p]}`, `${gap >= 0 ? "Beat" : "Lagged"} ${mGroup === ALLG ? "the index" : row.etf} by ${pct(Math.abs(gap), 1, false)}`, cls(med)),
     tile(p0(row.pct_above_50), "Above 50-day average · today", `4 weeks ago: ${p0(h.a50[ago])}`),
     tile(p0(row.pct_above_200), "Above 200-day average · today", `4 weeks ago: ${p0(h.a200[ago])}`),
-    tile(`<span class="chg-up">${row.new_highs}</span> <span style="font-size:13px;color:var(--text-3)">highs</span> · <span class="chg-down">${row.new_lows}</span> <span style="font-size:13px;color:var(--text-3)">lows</span>`,
-         "New 52-week highs vs lows · today", "Stocks closing at a new 1-year high or low"),
+    tile(`<span class="chg-up">${row.new_highs}<span style="font-size:15px"> ▲</span></span> <span style="color:var(--text-3)">·</span> <span class="chg-down">${row.new_lows}<span style="font-size:15px"> ▼</span></span>`,
+         "New 52-week highs vs lows · today", "▲ closed at a new 1-year high · ▼ at a new 1-year low"),
   ].join("");
 
   const who = mGroup === ALLG ? "S&P 500" : mGroup, idx = mGroup === ALLG ? "the index" : row.etf;
@@ -819,8 +1094,8 @@ function mRenderBars() {
     svg += `<g class="row${sel}" data-g="${esc(r.group)}"${dim}><rect class="hit" x="0" y="${y}" width="${W}" height="${rowH}" fill="transparent"/>`;
     svg += `<title>${esc(name)}: ${r.rising[p]} rising, ${r.falling[p]} falling · median stock ${fmtChg(r.median[p])} · ${r.etf} ${fmtChg(r.etf_chg[p])}</title>`;
     svg += `<text class="nm" x="0" y="${y + h / 2 + 9}" style="${isTot ? "font-weight:650;fill:var(--text)" : ""}">${esc(W < 460 && name.length > 17 ? name.slice(0, 16) + "…" : name)}</text>`;
-    svg += `<rect x="${mid - wd}" y="${y + 5}" width="${wd}" height="${h}" rx="3" fill="${css("--down")}"/>`;
-    svg += `<rect x="${mid}" y="${y + 5}" width="${wu}" height="${h}" rx="3" fill="${css("--up")}"/>`;
+    svg += `<rect x="${mid - wd}" y="${y + 5}" width="${wd}" height="${h}" rx="5" fill="${css("--down")}" stroke="${css("--s1")}" stroke-width="2"/>`;
+    svg += `<rect x="${mid}" y="${y + 5}" width="${wu}" height="${h}" rx="5" fill="${css("--up")}" stroke="${css("--s1")}" stroke-width="2"/>`;
     svg += `<text x="${mid - wd - 4}" y="${y + h / 2 + 9}" text-anchor="end" class="num">${r.falling[p]}</text>`;
     svg += `<text x="${mid + wu + 4}" y="${y + h / 2 + 9}" class="num">${r.rising[p]}</text>`;
     svg += `<text x="${W}" y="${y + h / 2 + 9}" text-anchor="end" class="num" style="fill:var(--text)">${p0(r.rising[p] / ((r.rising[p] + r.falling[p]) || 1))}</text></g>`;
@@ -861,7 +1136,7 @@ function mRenderHeat() {
   const order = ["^GSPC", "RSP", "QQQ", "IWM", "XLK", "XLC", "XLY", "XLP", "XLE", "XLF", "XLV", "XLI", "XLB", "XLRE", "XLU"];
   const rows = order.map((s) => MKT.benchmarks.find((b) => b.symbol === s)).filter(Boolean);
   const cap = { "1d": 0.02, "1w": 0.04, "1m": 0.08, "3m": 0.15, ytd: 0.3, "1y": 0.3 };
-  const heat = (k) => (v) => v == null ? "" : `background:color-mix(in srgb, var(${v >= 0 ? "--up" : "--down"}) ${Math.round(Math.min(Math.abs(v) / cap[k], 1) * 40)}%, transparent)${k === mPeriod ? ";font-weight:650" : ""}`;
+  const heat = (k) => (v) => v == null ? "" : `background:color-mix(in srgb, var(${v >= 0 ? "--up" : "--down"}) ${Math.round(Math.min(Math.abs(v) / cap[k], 1) * 85)}%, transparent)${k === mPeriod ? ";font-weight:700" : ""}`;
   mTable("mHeat", [
     { k: "name", label: "Fund", left: true, fmt: (v, r) => `<strong>${esc(r.symbol)}</strong> <span class="muted hide-sm">${esc(String(v).replace(/ (SPDR|ETF)$/, "").replace("Russell 2000 small caps", "Small caps"))}</span>` },
     ...Object.keys(MP).map((k) => ({ k: "chg_" + k, label: k.toUpperCase(), fmt: fmtChg, style: heat(k) })),
@@ -922,8 +1197,8 @@ function mRenderIdeas() {
       <td class="num hide-sm">${s.bb_pctb == null ? "—" : s.bb_pctb.toFixed(2)}</td>
       <td class="num ${s.macd_state === "bullish" ? "chg-up" : "chg-down"}">${s.macd_state === "bullish" ? "▲" : s.macd_state ? "▼" : "—"}</td>
       <td class="num ${cls(s.chg_1w)}">${pct(s.chg_1w)}</td></tr>`).join("");
-    return `<div class="card idea">
-      <div class="idea-h"><h2>${esc(x.name)}</h2><span class="pill" style="color:${bc};border-color:${bc}">${bl}</span></div>
+    return `<div class="card idea" data-bias="${esc(x.bias)}">
+      <div class="idea-h"><h2>${esc(x.name)}</h2><span class="pill">${bl}</span></div>
       <div class="muted">${esc(x.rule)}</div>
       <p class="idea-ex">${esc(x.explain)}</p>
       <p class="idea-rec">${verdict(x, I.baseline)}</p>
@@ -1000,7 +1275,7 @@ function mRenderCharts() {
   const n = 126, dates = B.dates.slice(-n), adv = g.adv.slice(-n), dec = g.dec.slice(-n), net = adv.map((a, i) => a - dec[i]);
   if (mNetChart) mNetChart.destroy();
   mNetChart = new Chart($("mNetChart"), { type: "bar",
-    data: { labels: dates, datasets: [{ label: "Net", data: net, backgroundColor: net.map((v) => v >= 0 ? css("--up") : css("--down")), borderRadius: 2, borderSkipped: false, categoryPercentage: 0.9, barPercentage: 0.9 }] },
+    data: { labels: dates, datasets: [{ label: "Net", data: net, backgroundColor: net.map((v) => v >= 0 ? css("--up") : css("--down")), borderColor: css("--s1"), borderWidth: 1, borderRadius: 3, borderSkipped: false, categoryPercentage: 0.9, barPercentage: 0.9 }] },
     options: { ...base({ callbacks: {
         title: (i) => new Date(i[0].label + "T00:00").toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }),
         label: (c) => [` ${adv[c.dataIndex]} rising`, ` ${dec[c.dataIndex]} falling`, ` Net ${c.raw > 0 ? "+" : ""}${c.raw}`] } }),
