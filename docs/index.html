@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mag 7 Dip Dashboard</title>
+<title>Market &amp; Mag 7 Dashboard</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Cpath d=%22M1 4l5 7 3-3 6 6%22 fill=%22none%22 stroke=%22%232a78d6%22 stroke-width=%222%22/%3E%3C/svg%3E">
-<meta name="description" content="Daily Mag 7 dip-buying signals, charts, news and backtest.">
+<meta name="description" content="Daily S&amp;P 500 market breadth by sector, plus Mag 7 dip-buying signals, charts, news and backtest.">
 <script src="chart.umd.js"></script><!-- Chart.js 4.4.4, MIT, bundled so there is no CDN dependency -->
 <style>
 :root {
@@ -128,6 +128,35 @@ tr.bench td { color: var(--text-2); }
 .tile .v { font-size: 22px; font-weight: 650; }
 .tile .k { color: var(--text-2); font-size: 12px; }
 
+/* market breadth */
+.jump { display: flex; gap: 8px; flex-wrap: wrap; margin: -8px 0 16px; }
+.jump a { text-decoration: none; }
+.big-h { font-size: 20px; letter-spacing: -0.01em; }
+.part-head { margin-top: 36px; padding-top: 16px; border-top: 1px solid var(--border); }
+.mgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 16px; }
+.mgrid > .card { min-width: 0; }
+@media (min-width: 1000px) { .mgrid-wide { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); } }
+.heat th, .heat td { padding: 7px 6px; }
+.mctl { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.mctl .btn { padding: 4px 9px; font-size: 13px; }
+select.btn { padding: 5px 8px; }
+.take { background: var(--info-bg); border-radius: 10px; padding: 10px 14px; margin: 0 0 12px; }
+.tile .s { color: var(--text-3); font-size: 12px; margin-top: 2px; }
+.split { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--grid); margin-top: 8px; }
+.split i { display: block; height: 100%; }
+.sbars svg { display: block; overflow: visible; }
+.sbars text { fill: var(--text-2); font-size: 12px; }
+.sbars .row { cursor: pointer; }
+.sbars .row:hover .hit { fill: var(--surface-2); }
+.sbars .sel text.nm { fill: var(--text); font-weight: 650; }
+.heat td { color: var(--text); }
+tr.sel td { background: var(--surface-2); font-weight: 600; }
+tr.click { cursor: pointer; }
+.tall { max-height: 520px; overflow: auto; }
+.tall thead th { position: sticky; top: 0; background: var(--surface); z-index: 1; }
+.search { border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 8px; padding: 6px 10px; font: inherit; width: min(100%, 260px); }
+@media (max-width: 640px) { .hide-sm { display: none; } }
+
 footer { margin-top: 32px; color: var(--text-3); font-size: 12px; }
 .hidden { display: none !important; }
 </style>
@@ -136,14 +165,84 @@ footer { margin-top: 32px; color: var(--text-3); font-size: 12px; }
 <div class="wrap">
   <header>
     <div>
-      <h1>Mag 7 Dip Dashboard</h1>
+      <h1>Market &amp; Mag 7 Dashboard</h1>
       <p class="sub" id="asof">Loading…</p>
     </div>
     <button class="btn" id="themeBtn" type="button">Theme: auto</button>
   </header>
 
-  <div id="sampleBanner" class="banner hidden"><strong>Sample data.</strong> These prices are randomly generated for testing. Real data appears after the first GitHub Actions run.</div>
+  <div id="sampleBanner" class="banner hidden"><strong>Sample data in the Mag 7 section.</strong> Those prices are randomly generated for testing; real data appears after the first GitHub Actions run. The market breadth section uses real prices.</div>
   <div id="errBanner" class="banner hidden"></div>
+
+  <nav class="jump"><a class="btn" href="#market">S&amp;P 500 market breadth</a><a class="btn" href="#mag7">Mag 7 dip strategy</a></nav>
+
+  <!-- ===================== MARKET BREADTH (market.json) ===================== -->
+  <div id="market">
+    <section>
+      <div class="sec-head">
+        <div><h2 class="big-h">S&amp;P 500 market breadth</h2><span class="muted" id="mAsof">Loading market data…</span></div>
+        <div class="mctl"><div class="mctl" id="mPeriods"></div><select class="btn" id="mGroup" aria-label="Sector"></select></div>
+      </div>
+      <p class="take hidden" id="mTake"></p>
+      <div class="tiles" id="mTiles"></div>
+    </section>
+
+    <section class="mgrid mgrid-wide">
+      <div class="card">
+        <div class="sec-head"><div><h2>Rising vs falling by sector</h2><span class="muted" id="mBarsNote"></span></div></div>
+        <div class="sbars" id="mBars"></div>
+      </div>
+      <div class="card">
+        <div class="sec-head"><div><h2>Sector fund returns</h2><span class="muted">SPDR sector ETFs · deeper colour = bigger move · click a sector row to focus on it</span></div></div>
+        <div class="tbl-wrap"><table class="heat" id="mHeat"></table></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="sec-head"><div><h2>Sector scoreboard</h2><span class="muted" id="mScoreNote"></span></div></div>
+      <div class="tbl-wrap"><table id="mScore"></table></div>
+    </section>
+
+    <section class="card">
+      <div class="sec-head"><div><h2>Breadth over time · <span class="mGname">S&amp;P 500</span></h2><span class="muted">Last 12 months</span></div></div>
+      <div class="mgrid">
+        <div>
+          <h2 id="mPriceTitle" style="font-size:14px">Price</h2>
+          <div class="chart-box" style="height:240px"><canvas id="mPriceChart" aria-label="Index price chart" role="img"></canvas></div>
+        </div>
+        <div>
+          <h2 style="font-size:14px">Share of stocks above their averages</h2>
+          <div class="legend" style="margin:0 0 4px"><span><i style="background:var(--s1)"></i>Above 50-day</span><span><i style="background:var(--s2)"></i>Above 200-day</span></div>
+          <div class="chart-box" style="height:222px"><canvas id="mAboveChart" aria-label="Share of stocks above moving averages" role="img"></canvas></div>
+        </div>
+      </div>
+      <h2 style="font-size:14px;margin-top:16px">Rising minus falling stocks, each day (last 6 months)</h2>
+      <p class="muted" style="margin:0 0 6px">Blue when more stocks rose than fell, red when more fell. A rising index with mostly red bars is a narrow rally.</p>
+      <div class="chart-box" style="height:200px"><canvas id="mNetChart" aria-label="Daily net advancers" role="img"></canvas></div>
+    </section>
+
+    <section class="mgrid">
+      <div class="card">
+        <div class="sec-head"><div><h2>Biggest gainers · <span class="mPname">1 day</span></h2><span class="muted mGname2">S&amp;P 500</span></div></div>
+        <div class="tbl-wrap"><table id="mUp"></table></div>
+      </div>
+      <div class="card">
+        <div class="sec-head"><div><h2>Biggest losers · <span class="mPname">1 day</span></h2><span class="muted mGname2">S&amp;P 500</span></div></div>
+        <div class="tbl-wrap"><table id="mDown"></table></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="sec-head">
+        <div><h2>All stocks · <span class="mGname">S&amp;P 500</span></h2><span class="muted" id="mAllNote"></span></div>
+        <input class="search" id="mSearch" type="search" placeholder="Search ticker or company" aria-label="Search stocks">
+      </div>
+      <div class="tbl-wrap tall"><table id="mAll"></table></div>
+    </section>
+  </div>
+
+  <h2 class="big-h part-head" id="mag7">Mag 7 dip strategy</h2>
+
 
   <!-- 1. Today's signals -->
   <section>
@@ -218,6 +317,7 @@ footer { margin-top: 32px; color: var(--text-3); font-size: 12px; }
 
   <footer>
     <p><strong>Not financial advice.</strong> A personal learning project. Backtests use past prices and ignore fees, taxes and slippage; past results don't predict future returns. Prices from Yahoo Finance (via yfinance), which can be delayed or wrong. AI summaries are generated by a language model from headlines and can be inaccurate.</p>
+    <p>Market breadth: "rising" means a stock's close is higher than at the start of the period, "falling" lower; returns are price changes without dividends. The median stock is the middle one when all are lined up from worst to best. S&amp;P 500 members and GICS sectors come from the open <a href="https://github.com/datasets/s-and-p-500-companies">datasets/s-and-p-500-companies</a> list.</p>
   </footer>
 </div>
 
@@ -242,6 +342,7 @@ function applyTheme() {
   else document.documentElement.setAttribute("data-theme", theme);
   $("themeBtn").textContent = "Theme: " + theme;
   if (DATA) { renderBars(); renderDetail(); renderBtChart(); }
+  if (typeof MKT !== "undefined" && MKT) { mRenderBars(); mRenderCharts(); }
 }
 $("themeBtn").onclick = () => {
   theme = THEMES[(THEMES.indexOf(theme) + 1) % 3];
@@ -513,6 +614,240 @@ function renderBtChart() {
   if (btChart) btChart.destroy();
   btChart = new Chart($("btChart"), cfg);
 }
+
+/* =====================================================================
+   MARKET BREADTH — reads market.json (built by market.py)
+   ===================================================================== */
+const MP = { "1d": "1 day", "1w": "1 week", "1m": "1 month", "3m": "3 months", "ytd": "Year to date", "1y": "1 year" };
+const ALLG = "S&P 500";
+let MKT = null, mPeriod = "1d", mGroup = ALLG, mPriceChart, mAboveChart, mNetChart;
+const mSort = {};   // table id -> {k, dir}
+const p0 = (x) => x == null ? "—" : Math.round(x * 100) + "%";
+const fmtChg = (x) => x == null ? "—" : pct(x, Math.abs(x) < 0.1 ? 2 : 1);
+const num = (x) => x == null ? "—" : x.toLocaleString("en-US");
+
+fetch("market.json?t=" + Date.now())
+  .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then((d) => { MKT = d; mInit(); })
+  .catch(() => {
+    $("mAsof").textContent = "No market data yet — it appears after the next build (python build.py).";
+  });
+
+function mInit() {
+  const gen = new Date(MKT.generated_at);
+  $("mAsof").textContent = `${MKT.stocks.length} stocks in ${MKT.sectors.length - 1} sectors · prices as of US close ${MKT.as_of} · updated ${gen.toLocaleString()}`;
+  $("mPeriods").innerHTML = Object.entries(MP).map(([k]) => `<button class="btn" type="button" data-p="${k}">${k.toUpperCase()}</button>`).join("");
+  $("mPeriods").querySelectorAll("button").forEach((b) => b.onclick = () => { mPeriod = b.dataset.p; mRender(); });
+  $("mGroup").innerHTML = MKT.sectors.map((s) => `<option value="${esc(s.group)}">${s.group === ALLG ? "All S&amp;P 500" : esc(s.group)}</option>`).join("");
+  $("mGroup").onchange = () => { mGroup = $("mGroup").value; mRender(); };
+  $("mSearch").oninput = () => mRenderAll();
+  mRender();
+}
+function mFocus(g) { mGroup = mGroup === g ? ALLG : g; mRender(); }
+
+function mRender() {
+  $("mPeriods").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.p === mPeriod)));
+  $("mGroup").value = mGroup;
+  document.querySelectorAll(".mGname").forEach((e) => e.textContent = mGroup);
+  document.querySelectorAll(".mGname2").forEach((e) => e.textContent = mGroup === ALLG ? "All S&P 500 stocks" : mGroup);
+  document.querySelectorAll(".mPname").forEach((e) => e.textContent = MP[mPeriod].toLowerCase());
+  mRenderTiles(); mRenderBars(); mRenderHeat(); mRenderScore(); mRenderMovers(); mRenderAll(); mRenderCharts();
+}
+
+/* ---- headline tiles + takeaway ---- */
+function mRenderTiles() {
+  const p = mPeriod, row = MKT.sectors.find((s) => s.group === mGroup);
+  const etf = MKT.benchmarks.find((b) => b.symbol === row.etf) || {};
+  const ichg = etf["chg_" + p], up = row.rising[p], dn = row.falling[p], med = row.median[p];
+  const B = MKT.breadth, h = B.groups[mGroup], ago = h.a50.length - 1 - 20;
+  const tile = (v, k, s, c = "", extra = "") => `<div class="card tile"><div class="k">${k}</div><div class="v num ${c}">${v}</div><div class="s">${s}</div>${extra}</div>`;
+  const label = mGroup === ALLG ? "S&P 500 index" : `${row.etf} sector fund`;
+  const gap = (med ?? 0) - (ichg ?? 0);
+  $("mTiles").innerHTML = [
+    tile(fmtChg(ichg), `${label} · ${MP[p]}`, `${esc(etf.name || "")} at ${(etf.price ?? 0).toLocaleString("en-US", { maximumFractionDigits: 2 })}`, cls(ichg)),
+    tile(`<span class="chg-up">${num(up)}</span> <span style="font-size:13px;color:var(--text-3)">up</span> · <span class="chg-down">${num(dn)}</span> <span style="font-size:13px;color:var(--text-3)">down</span>`,
+         `Stocks rising vs falling · ${MP[p]}`, `${p0(up / ((up + dn) || 1))} of ${row.stocks} stocks rose`, "",
+         `<div class="split"><i style="width:${up / ((up + dn) || 1) * 100}%;background:var(--up)"></i><i style="width:${dn / ((up + dn) || 1) * 100}%;background:var(--down)"></i></div>`),
+    tile(fmtChg(med), `Median stock · ${MP[p]}`, `${gap >= 0 ? "Beat" : "Lagged"} ${mGroup === ALLG ? "the index" : row.etf} by ${pct(Math.abs(gap), 1, false)}`, cls(med)),
+    tile(p0(row.pct_above_50), "Above 50-day average · today", `4 weeks ago: ${p0(h.a50[ago])}`),
+    tile(p0(row.pct_above_200), "Above 200-day average · today", `4 weeks ago: ${p0(h.a200[ago])}`),
+    tile(`<span class="chg-up">${row.new_highs}</span> <span style="font-size:13px;color:var(--text-3)">highs</span> · <span class="chg-down">${row.new_lows}</span> <span style="font-size:13px;color:var(--text-3)">lows</span>`,
+         "New 52-week highs vs lows · today", "Stocks closing at a new 1-year high or low"),
+  ].join("");
+
+  const who = mGroup === ALLG ? "S&P 500" : mGroup, idx = mGroup === ALLG ? "the index" : row.etf;
+  let t = `${MP[p]}: ${num(up)} of ${num(row.stocks)} ${who} stocks rose and ${num(dn)} fell, while ${idx} ${ichg >= 0 ? "gained" : "lost"} ${pct(Math.abs(ichg ?? 0), 1, false)}.`;
+  const a = row.pct_above_50;
+  if (a < 0.4 && ((etf.chg_1m ?? 0) > 0 || (etf.from_52w_high ?? -1) > -0.03)) t += ` Breadth is narrow: ${idx} is near its high but only ${p0(a)} of stocks are above their 50-day average, so a few big names are doing the lifting.`;
+  else if (a < 0.4) t += ` Breadth is weak: only ${p0(a)} of stocks are above their 50-day average.`;
+  else if (a > 0.6) t += ` Breadth is healthy: ${p0(a)} of stocks are above their 50-day average.`;
+  else t += ` Breadth is mixed: ${p0(a)} of stocks are above their 50-day average.`;
+  $("mTake").textContent = t; $("mTake").classList.remove("hidden");
+}
+
+/* ---- diverging bars: rising vs falling per sector ---- */
+function mRenderBars() {
+  const p = mPeriod;
+  const tot = MKT.sectors[0];
+  const secs = MKT.sectors.slice(1).sort((a, b) => b.rising[p] / ((b.rising[p] + b.falling[p]) || 1) - a.rising[p] / ((a.rising[p] + a.falling[p]) || 1));
+  const rows = [tot, ...secs];
+  const W = Math.max(320, $("mBars").clientWidth || 520), rowH = 26, top = 20, H = top + rows.length * rowH + 8;
+  const left = W < 460 ? 118 : 168, right = 46, mid = left + (W - left - right) / 2, half = (W - left - right) / 2 - 26;
+  const max = Math.max(1, ...secs.map((s) => Math.max(s.rising[p], s.falling[p])));
+  let svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Rising vs falling stocks by sector">`;
+  svg += `<text x="${mid - 6}" y="12" text-anchor="end" style="font-size:11px">◀ falling</text><text x="${mid + 6}" y="12" style="font-size:11px">rising ▶</text><text x="${W}" y="12" text-anchor="end" style="font-size:11px">% up</text>`;
+  rows.forEach((r, i) => {
+    const y = top + i * rowH, h = rowH - 10, isTot = i === 0;
+    // total row uses its own scale (share of all stocks); sector rows share one scale
+    const sc = isTot ? half / ((r.rising[p] + r.falling[p]) || 1) : half / max;
+    const wd = Math.max(1, r.falling[p] * sc), wu = Math.max(1, r.rising[p] * sc);
+    const sel = r.group === mGroup ? " sel" : "", dim = mGroup !== ALLG && !sel && !isTot ? ' opacity="0.45"' : "";
+    const name = isTot ? "All S&P 500" : r.group;
+    svg += `<g class="row${sel}" data-g="${esc(r.group)}"${dim}><rect class="hit" x="0" y="${y}" width="${W}" height="${rowH}" fill="transparent"/>`;
+    svg += `<title>${esc(name)}: ${r.rising[p]} rising, ${r.falling[p]} falling · median stock ${fmtChg(r.median[p])} · ${r.etf} ${fmtChg(r.etf_chg[p])}</title>`;
+    svg += `<text class="nm" x="0" y="${y + h / 2 + 9}" style="${isTot ? "font-weight:650;fill:var(--text)" : ""}">${esc(W < 460 && name.length > 17 ? name.slice(0, 16) + "…" : name)}</text>`;
+    svg += `<rect x="${mid - wd}" y="${y + 5}" width="${wd}" height="${h}" rx="3" fill="${css("--down")}"/>`;
+    svg += `<rect x="${mid}" y="${y + 5}" width="${wu}" height="${h}" rx="3" fill="${css("--up")}"/>`;
+    svg += `<text x="${mid - wd - 4}" y="${y + h / 2 + 9}" text-anchor="end" class="num">${r.falling[p]}</text>`;
+    svg += `<text x="${mid + wu + 4}" y="${y + h / 2 + 9}" class="num">${r.rising[p]}</text>`;
+    svg += `<text x="${W}" y="${y + h / 2 + 9}" text-anchor="end" class="num" style="fill:var(--text)">${p0(r.rising[p] / ((r.rising[p] + r.falling[p]) || 1))}</text></g>`;
+    if (isTot) svg += `<line x1="0" x2="${W}" y1="${y + rowH + 1}" y2="${y + rowH + 1}" stroke="${css("--border")}"/>`;
+  });
+  svg += `<line x1="${mid}" x2="${mid}" y1="${top}" y2="${H - 4}" stroke="${css("--text-3")}"/>`;
+  $("mBars").innerHTML = svg + "</svg>";
+  $("mBars").querySelectorAll(".row").forEach((g) => g.onclick = () => mFocus(g.dataset.g));
+  $("mBarsNote").textContent = `Stocks up and down over ${MP[p].toLowerCase()}, sorted by share rising. Sector bars share one scale; click one to focus the page on it.`;
+}
+
+/* ---- generic sortable table ---- */
+function mTable(id, cols, rows, opts = {}) {
+  const st = mSort[id];
+  if (st) rows = [...rows].sort((a, b) => {
+    const A = a[st.k], B = b[st.k];
+    if (A == null && B == null) return 0; if (A == null) return 1; if (B == null) return -1;
+    return (typeof A === "string" ? A.localeCompare(B) : A - B) * st.dir;
+  });
+  if (opts.pin) rows = [...rows.filter(opts.pin), ...rows.filter((r) => !opts.pin(r))];
+  const head = "<thead><tr>" + cols.map((c) => `<th data-k="${c.k}" class="${c.hide ? "hide-sm" : ""}${opts.nosort ? " nosort" : ""}"${c.left ? ' style="text-align:left"' : ""}>${c.label}${st && st.k === c.k ? (st.dir > 0 ? " ▲" : " ▼") : ""}</th>`).join("") + "</tr></thead>";
+  const body = rows.map((r) => `<tr class="${opts.rowClass ? opts.rowClass(r) : ""}" data-k="${esc(r[opts.key] ?? "")}">` + cols.map((c) => {
+    const v = r[c.k];
+    const txt = c.fmt ? c.fmt(v, r) : esc(v ?? "—");
+    return `<td class="num ${c.color ? cls(v) : ""} ${c.hide ? "hide-sm" : ""}"${c.left ? ' style="text-align:left"' : ""}${c.style ? ` style="${c.style(v, r)}"` : ""}>${txt}</td>`;
+  }).join("") + "</tr>").join("");
+  $(id).innerHTML = head + "<tbody>" + body + "</tbody>";
+  if (!opts.nosort) $(id).querySelectorAll("th").forEach((th) => th.onclick = () => {
+    const k = th.dataset.k, cur = mSort[id];
+    mSort[id] = { k, dir: cur && cur.k === k ? -cur.dir : (/symbol|name|sector|group/.test(k) ? 1 : -1) };
+    opts.redraw();
+  });
+  if (opts.onRow) $(id).querySelectorAll("tbody tr").forEach((tr) => tr.onclick = () => opts.onRow(tr.dataset.k));
+}
+
+/* ---- sector fund heat table ---- */
+function mRenderHeat() {
+  const order = ["^GSPC", "RSP", "QQQ", "IWM", "XLK", "XLC", "XLY", "XLP", "XLE", "XLF", "XLV", "XLI", "XLB", "XLRE", "XLU"];
+  const rows = order.map((s) => MKT.benchmarks.find((b) => b.symbol === s)).filter(Boolean);
+  const cap = { "1d": 0.02, "1w": 0.04, "1m": 0.08, "3m": 0.15, ytd: 0.3, "1y": 0.3 };
+  const heat = (k) => (v) => v == null ? "" : `background:color-mix(in srgb, var(${v >= 0 ? "--up" : "--down"}) ${Math.round(Math.min(Math.abs(v) / cap[k], 1) * 40)}%, transparent)${k === mPeriod ? ";font-weight:650" : ""}`;
+  mTable("mHeat", [
+    { k: "name", label: "Fund", left: true, fmt: (v, r) => `<strong>${esc(r.symbol)}</strong> <span class="muted hide-sm">${esc(String(v).replace(/ (SPDR|ETF)$/, "").replace("Russell 2000 small caps", "Small caps"))}</span>` },
+    ...Object.keys(MP).map((k) => ({ k: "chg_" + k, label: k.toUpperCase(), fmt: fmtChg, style: heat(k) })),
+  ], rows, { key: "group", redraw: mRenderHeat, rowClass: (r) => (r.group ? "click" : "") + (r.group && r.group === mGroup ? " sel" : ""),
+             onRow: (g) => g && mFocus(g) });
+}
+
+/* ---- sector scoreboard ---- */
+function mRenderScore() {
+  const p = mPeriod;
+  const rows = MKT.sectors.map((s) => ({ group: s.group, stocks: s.stocks, rising: s.rising[p], falling: s.falling[p],
+    pct_rising: s.rising[p] / ((s.rising[p] + s.falling[p]) || 1), median: s.median[p], etf_chg: s.etf_chg[p], etf: s.etf,
+    pct_above_50: s.pct_above_50, pct_above_200: s.pct_above_200, new_highs: s.new_highs, new_lows: s.new_lows }));
+  mTable("mScore", [
+    { k: "group", label: "Sector", left: true, fmt: (v) => v === ALLG ? "<strong>All S&amp;P 500</strong>" : esc(v) },
+    { k: "stocks", label: "Stocks", fmt: num },
+    { k: "rising", label: "Rising", fmt: (v) => `<span class="chg-up">${num(v)}</span>` },
+    { k: "falling", label: "Falling", fmt: (v) => `<span class="chg-down">${num(v)}</span>` },
+    { k: "pct_rising", label: "% rising", fmt: p0 },
+    { k: "median", label: "Median stock", fmt: fmtChg, color: true },
+    { k: "etf_chg", label: "Sector fund", fmt: (v, r) => `${fmtChg(v)} <span class="muted">${esc(r.etf || "")}</span>`, color: true },
+    { k: "pct_above_50", label: "% &gt; 50-day", fmt: p0, hide: true },
+    { k: "pct_above_200", label: "% &gt; 200-day", fmt: p0, hide: true },
+    { k: "new_highs", label: "New highs", fmt: num, hide: true },
+    { k: "new_lows", label: "New lows", fmt: num, hide: true },
+  ], rows, { key: "group", redraw: mRenderScore, pin: (r) => r.group === ALLG,
+             rowClass: (r) => "click" + (r.group === mGroup ? " sel" : ""), onRow: mFocus });
+  $("mScoreNote").textContent = `Rising, falling, median and fund columns cover ${MP[p].toLowerCase()}; the last four are as of today. Click a column to sort, a row to focus on that sector.`;
+}
+
+/* ---- movers + all stocks ---- */
+const inGroup = (s) => mGroup === ALLG || s.sector === mGroup;
+function mRenderMovers() {
+  const k = "chg_" + mPeriod;
+  const list = MKT.stocks.filter((s) => inGroup(s) && s[k] != null);
+  const cols = [
+    { k: "symbol", label: "Stock", left: true, fmt: (v, r) => `<strong>${esc(v)}</strong> <span class="muted">${esc(r.name)}</span>` },
+    { k: "sector", label: "Sector", hide: true },
+    { k, label: "Change", fmt: fmtChg, color: true },
+  ];
+  mTable("mUp", cols, [...list].sort((a, b) => b[k] - a[k]).slice(0, 10), { nosort: true });
+  mTable("mDown", cols, [...list].sort((a, b) => a[k] - b[k]).slice(0, 10), { nosort: true });
+}
+function mRenderAll() {
+  const q = $("mSearch").value.trim().toLowerCase(), k = "chg_" + mPeriod;
+  let rows = MKT.stocks.filter((s) => inGroup(s) && (!q || s.symbol.toLowerCase().includes(q) || s.name.toLowerCase().includes(q)));
+  if (!mSort.mAll) rows.sort((a, b) => (b[k] ?? -9) - (a[k] ?? -9));
+  const bold = (c) => (v) => c === k ? `<strong>${fmtChg(v)}</strong>` : fmtChg(v);
+  mTable("mAll", [
+    { k: "symbol", label: "Stock", left: true, fmt: (v, r) => `<strong>${esc(v)}</strong> <span class="muted">${esc(r.name)}</span>` },
+    { k: "sector", label: "Sector", left: true, hide: true },
+    { k: "price", label: "Price", fmt: money },
+    ...["1d", "1w", "1m", "3m", "ytd", "1y"].map((p) => ({ k: "chg_" + p, label: p.toUpperCase(), fmt: bold("chg_" + p), color: true, hide: p === "3m" || p === "1y" })),
+    { k: "vs_sma200", label: "vs 200-day", fmt: fmtChg, color: true, hide: true },
+    { k: "from_52w_high", label: "From 52w high", fmt: (v) => pct(v), hide: true },
+    { k: "rsi14", label: "RSI", fmt: (v) => v == null ? "—" : Math.round(v), hide: true },
+  ], rows, { key: "symbol", redraw: mRenderAll });
+  $("mAllNote").textContent = `${rows.length} stock${rows.length === 1 ? "" : "s"}${mSort.mAll ? "" : `, sorted by ${MP[mPeriod].toLowerCase()} change`} · click a column to sort`;
+}
+
+/* ---- charts (Chart.js) ---- */
+function mRenderCharts() {
+  if (!MKT) return;
+  chartDefaults();
+  const row = MKT.sectors.find((s) => s.group === mGroup), sym = row.etf;
+  const H = MKT.history, B = MKT.breadth, g = B.groups[mGroup];
+  const dateTick = function (v) { return new Date(this.getLabelForValue(v) + "T00:00").toLocaleDateString(undefined, { month: "short", year: "2-digit" }); };
+  const xAxis = { grid: { display: false }, border: { color: css("--border") }, ticks: { maxTicksLimit: 6, maxRotation: 0, callback: dateTick } };
+  const pt = { pointRadius: 0, pointHoverRadius: 4, pointHoverBorderColor: css("--surface"), pointHoverBorderWidth: 2, tension: 0, borderWidth: 2 };
+  const base = (extra) => ({ responsive: true, maintainAspectRatio: false, animation: false, interaction: { mode: "index", intersect: false },
+    plugins: { legend: { display: false }, tooltip: { ...tooltipStyle(), ...extra } } });
+
+  $("mPriceTitle").textContent = (mGroup === ALLG ? "S&P 500 index" : `${mGroup} fund (${sym})`) + " price";
+  if (mPriceChart) mPriceChart.destroy();
+  mPriceChart = new Chart($("mPriceChart"), { type: "line",
+    data: { labels: H.dates, datasets: [{ label: sym, data: H.closes[sym], borderColor: css("--s1"), backgroundColor: css("--s1"), ...pt }] },
+    options: { ...base({ callbacks: { label: (c) => ` ${sym}: ${c.raw.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` } }),
+      scales: { x: xAxis, y: { grid: { color: css("--grid") }, border: { display: false } } } }, plugins: [crosshair] });
+
+  if (mAboveChart) mAboveChart.destroy();
+  mAboveChart = new Chart($("mAboveChart"), { type: "line",
+    data: { labels: B.dates, datasets: [
+      { label: "Above 50-day", data: g.a50.map((v) => v * 100), borderColor: css("--s1"), backgroundColor: css("--s1"), ...pt },
+      { label: "Above 200-day", data: g.a200.map((v) => v * 100), borderColor: css("--s2"), backgroundColor: css("--s2"), ...pt }] },
+    options: { ...base({ callbacks: { label: (c) => ` ${c.dataset.label}: ${Math.round(c.raw)}%` } }),
+      scales: { x: xAxis, y: { min: 0, max: 100, grid: { color: (c) => c.tick.value === 50 ? css("--text-3") : css("--grid") }, border: { display: false }, ticks: { stepSize: 25, callback: (v) => v + "%" } } } },
+    plugins: [crosshair] });
+
+  const n = 126, dates = B.dates.slice(-n), adv = g.adv.slice(-n), dec = g.dec.slice(-n), net = adv.map((a, i) => a - dec[i]);
+  if (mNetChart) mNetChart.destroy();
+  mNetChart = new Chart($("mNetChart"), { type: "bar",
+    data: { labels: dates, datasets: [{ label: "Net", data: net, backgroundColor: net.map((v) => v >= 0 ? css("--up") : css("--down")), borderRadius: 2, borderSkipped: false, categoryPercentage: 0.9, barPercentage: 0.9 }] },
+    options: { ...base({ callbacks: {
+        title: (i) => new Date(i[0].label + "T00:00").toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }),
+        label: (c) => [` ${adv[c.dataIndex]} rising`, ` ${dec[c.dataIndex]} falling`, ` Net ${c.raw > 0 ? "+" : ""}${c.raw}`] } }),
+      scales: { x: xAxis, y: { grid: { color: (c) => c.tick.value === 0 ? css("--text-3") : css("--grid") }, border: { display: false } } } } });
+}
+let mrsz; addEventListener("resize", () => { clearTimeout(mrsz); mrsz = setTimeout(() => MKT && mRenderBars(), 150); });
+
 
 applyTheme();
 </script>
