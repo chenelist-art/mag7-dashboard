@@ -43,6 +43,7 @@ MARKET_ENABLED = True
 # Current S&P 500 members with GICS sectors (free, community-maintained list on GitHub)
 SP500_LIST_URL = "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/main/data/constituents.csv"
 MARKET_HISTORY_DAYS = 252   # ~1 year of daily breadth history for the charts
+MARKET_PERIOD = "3y"        # how much price history to download (3y gives the trade-idea backtest ~2 years of signals)
 # Index + sector funds shown next to the breadth numbers: symbol -> (name, sector it tracks)
 MARKET_BENCHMARKS = {
     "^GSPC": ("S&P 500 index", "S&P 500"),

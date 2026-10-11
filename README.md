@@ -3,6 +3,7 @@
 A free, auto-updating dashboard with two parts:
 
 - **S&P 500 market breadth**: how many of the ~500 stocks are rising or falling, overall and in each of the 11 sectors, over 1 day to 1 year. Also shows the share of stocks above their 50/200-day averages, new 52-week highs and lows, sector fund returns, top movers and a searchable table of every stock.
+- **Trade ideas**: stocks matching common technical setups (RSI, MACD, Bollinger Bands), each with its track record over the past ~2 years.
 - **Mag 7 dip strategy**: the Magnificent 7 (NVDA, GOOGL, MSFT, META, AAPL, TSLA, AMZN), with SPY and QQQ as benchmarks.
 
 Every weekday after the US market closes, GitHub runs a script that:
@@ -97,6 +98,16 @@ Everything is in `config.py`:
 - **% above 50/200-day average:** share of stocks whose close is above the mean of their last 50/200 closes. Above 50% = most stocks in an uptrend
 - **New 52-week high/low:** today's close is above/below every close in the previous 251 trading days
 - Takes about 1–2 minutes extra in the daily run. If it fails (e.g. Yahoo rate-limits), the Mag 7 part still updates and the page keeps yesterday's `market.json`
+
+## Indicators and trade ideas
+
+- **RSI (14):** 0–100 score of recent up vs down moves (Wilder smoothing). Above 70 overbought, below 30 oversold
+- **MACD (12, 26, 9):** 12-day EMA minus 26-day EMA, with a 9-day EMA "signal" line; the histogram is the gap between them
+- **Bollinger Bands (20, 2):** 20-day average ± 2 standard deviations. %B = where the price sits in the band (0 = lower, 1 = upper). Squeeze = band width in its narrowest 10% of the last 6 months
+- The Mag 7 detail chart shows the bands on the price chart, with RSI and MACD panels under it (calculated in the page from the price history)
+- **Trade ideas** (`market.py`, `SETUPS`): rule-based screens over all S&P 500 stocks: pullback in an uptrend, lower-band bounce, MACD bullish crossover, Bollinger squeeze, 52-week-high breakout, overbought, MACD bearish crossover in a downtrend. Edit or add rules in `_setup_conditions()` and `SETUPS`
+- **Past record:** every time a setup first appeared during the test window, the stock's return over the next 21 trading days is recorded, then compared with all stocks on all days. `MARKET_PERIOD` in `config.py` sets how much history is downloaded (3 years ≈ 2 years of test window)
+- Limitations: today's members only (survivorship bias), no fees, overlapping 1-month windows, and a short test period. These are screens, not recommendations
 
 ## How the backtest works (for your write-up)
 

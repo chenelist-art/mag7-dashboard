@@ -157,6 +157,23 @@ tr.click { cursor: pointer; }
 .search { border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 8px; padding: 6px 10px; font: inherit; width: min(100%, 260px); }
 @media (max-width: 640px) { .hide-sm { display: none; } }
 
+/* trade ideas + indicators */
+.ideas { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); gap: 12px; }
+.idea { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.idea-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.idea-h h2 { margin: 0; }
+.pill { font-size: 11px; font-weight: 600; border: 1px solid; border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+.idea-ex { margin: 4px 0 0; font-size: 13px; color: var(--text-2); }
+.idea-rec { margin: 4px 0 6px; font-size: 12px; background: var(--surface-2); border-radius: 8px; padding: 6px 8px; }
+.idea-t th, .idea-t td { padding: 5px 6px; font-size: 12px; }
+.idea-t .nm { display: inline-block; max-width: 8.5em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+.idea-t a { color: var(--text); text-decoration: none; } .idea-t a:hover { text-decoration: underline; }
+.idea .more { align-self: flex-start; margin-top: 6px; font-size: 12px; padding: 3px 8px; }
+.disclaim { background: var(--surface-2); border-radius: 10px; padding: 8px 12px; margin: 0 0 12px; font-size: 13px; color: var(--text-2); }
+.explain dt { font-weight: 650; margin-top: 10px; } .explain dd { margin: 2px 0 0; color: var(--text-2); }
+.ind-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin-top: 12px; }
+.ind-head h2 { font-size: 13px; margin: 0; }
+
 footer { margin-top: 32px; color: var(--text-3); font-size: 12px; }
 .hidden { display: none !important; }
 </style>
@@ -174,7 +191,7 @@ footer { margin-top: 32px; color: var(--text-3); font-size: 12px; }
   <div id="sampleBanner" class="banner hidden"><strong>Sample data in the Mag 7 section.</strong> Those prices are randomly generated for testing; real data appears after the first GitHub Actions run. The market breadth section uses real prices.</div>
   <div id="errBanner" class="banner hidden"></div>
 
-  <nav class="jump"><a class="btn" href="#market">S&amp;P 500 market breadth</a><a class="btn" href="#mag7">Mag 7 dip strategy</a></nav>
+  <nav class="jump"><a class="btn" href="#market">S&amp;P 500 market breadth</a><a class="btn" href="#ideas">Trade ideas</a><a class="btn" href="#mag7">Mag 7 dip strategy</a></nav>
 
   <!-- ===================== MARKET BREADTH (market.json) ===================== -->
   <div id="market">
@@ -185,6 +202,12 @@ footer { margin-top: 32px; color: var(--text-3); font-size: 12px; }
       </div>
       <p class="take hidden" id="mTake"></p>
       <div class="tiles" id="mTiles"></div>
+    </section>
+
+    <section id="ideas">
+      <div class="sec-head"><div><h2 class="big-h" style="font-size:18px">Trade ideas · technical setups</h2><span class="muted" id="mIdeasNote"></span></div></div>
+      <p class="disclaim"><strong>Screens, not recommendations.</strong> Each list is simply the stocks whose chart matches a common rule today. The "past record" line shows how often stocks with that signal were higher a month later, compared with any stock on any day. Past patterns often fail, so treat these as starting points for your own research.</p>
+      <div class="ideas" id="mIdeas"></div>
     </section>
 
     <section class="mgrid mgrid-wide">
@@ -241,6 +264,22 @@ footer { margin-top: 32px; color: var(--text-3); font-size: 12px; }
     </section>
   </div>
 
+  <section class="card" id="indicators-explained">
+    <h2>How to read the indicators</h2>
+    <dl class="explain">
+      <dt>RSI (Relative Strength Index, 14 days)</dt>
+      <dd>A 0–100 score of how strongly the price has moved up vs down lately. Above 70 = "overbought" (risen fast, may cool off); below 30 = "oversold" (fallen fast, may bounce). In strong trends it can stay extreme for a long time.</dd>
+      <dt>MACD (12, 26, 9)</dt>
+      <dd>The gap between a fast (12-day) and slow (26-day) average of the price. When the MACD line crosses above its 9-day signal line, momentum is turning up; crossing below, turning down. The bars (histogram) show the distance between the two.</dd>
+      <dt>Bollinger Bands (20 days, 2 standard deviations)</dt>
+      <dd>A band around the 20-day average that widens when the price is jumpy and narrows when it's calm. Price near the upper band = high vs its recent range; near the lower band = low. %B puts this on a scale: 0 = lower band, 1 = upper band. A "squeeze" (very narrow bands) often comes before a bigger move.</dd>
+      <dt>200-day average</dt>
+      <dd>Used as the long-term trend filter: price above it = uptrend, below = downtrend.</dd>
+      <dt>Past record</dt>
+      <dd>For every time a setup appeared in the test period, we check whether the stock was higher 21 trading days (~1 month) later. "All stocks" is the same check on every stock and every day, so you can see whether the setup actually added anything. It only uses today's S&amp;P 500 members (so it ignores companies that dropped out) and doesn't include fees.</dd>
+    </dl>
+  </section>
+
   <h2 class="big-h part-head" id="mag7">Mag 7 dip strategy</h2>
 
 
@@ -280,9 +319,14 @@ footer { margin-top: 32px; color: var(--text-3); font-size: 12px; }
           <span><i style="background:var(--s1)"></i>Price</span>
           <span><i style="background:var(--s2)"></i>50-day average</span>
           <span><i style="background:var(--s3)"></i>200-day average</span>
+          <span><i style="background:var(--text-3)"></i>Bollinger Bands</span>
           <span id="legTri"><i class="tri"></i>Dip buy (backtest)</span>
         </div>
         <div class="chart-box"><canvas id="priceChart" aria-label="Price chart" role="img"></canvas></div>
+        <div class="ind-head"><h2>RSI (14)</h2><span class="muted">Above 70 overbought · below 30 oversold</span></div>
+        <div class="chart-box" style="height:120px"><canvas id="rsiChart" aria-label="RSI chart" role="img"></canvas></div>
+        <div class="ind-head"><h2>MACD (12, 26, 9)</h2><span class="legend" style="margin:0"><span><i style="background:var(--s1)"></i>MACD</span><span><i style="background:var(--s2)"></i>Signal</span><span><i style="background:var(--up);height:8px;width:8px"></i>Histogram</span></span></div>
+        <div class="chart-box" style="height:150px"><canvas id="macdChart" aria-label="MACD chart" role="img"></canvas></div>
         <div id="dAi"></div>
         <h2 style="margin-top:14px">Latest news</h2>
         <ul class="news" id="dNews"></ul>
@@ -483,6 +527,10 @@ function renderDetail() {
   const s = DATA.stocks[current];
   $("dTitle").innerHTML = `${current} <span class="muted">${esc(s.name)}</span> &nbsp;${badge(s.signal)}`;
   $("dNote").textContent = s.signal_note;
+  const ind = calcIndicators(s.history.map((r) => r[1]));
+  const ro = indicatorReadout(s, ind);
+  const ms = (typeof MKT !== "undefined" && MKT) ? MKT.stocks.find((x) => x.symbol === current) : null;
+  const setupNames = ms && MKT.ideas ? MKT.ideas.setups.filter((x) => (ms.setups || []).includes(x.id)).map((x) => x.name) : [];
   $("legTri").classList.toggle("hidden", s.benchmark);
 
   $("dStats").innerHTML = [
@@ -491,7 +539,12 @@ function renderDetail() {
     ["Year to date", `<span class="${cls(s.chg_ytd)}">${pct(s.chg_ytd)}</span>`],
     ["From 52-week high", pct(s.from_52w_high)], ["50-day average", money(s.sma50)],
     ["200-day average", money(s.sma200)], ["RSI (14)", s.rsi14 ?? "—"], ["Trend", s.trend],
-  ].map(([k, v]) => `<dt>${k}</dt><dd class="num">${v}</dd>`).join("");
+    ["MACD", ro.m == null ? "—" : ro.m > ro.sg ? '<span class="chg-up">▲ above signal</span>' : '<span class="chg-down">▼ below signal</span>'],
+    ["Bollinger %B", ro.pb == null ? "—" : ro.pb.toFixed(2)],
+    ["Upper / lower band", ind.up.at(-1) == null ? "—" : `${money(ind.up.at(-1))} / ${money(ind.lo.at(-1))}`],
+  ].map(([k, v]) => `<dt>${k}</dt><dd class="num">${v}</dd>`).join("") +
+    `<dt style="grid-column:1/-1;margin-top:6px">Indicator readout</dt><dd style="grid-column:1/-1;text-align:left;font-weight:400;color:var(--text-2)">${esc(ro.text)}</dd>` +
+    (ms ? `<dt style="grid-column:1/-1;margin-top:6px">Matching trade-idea setups today</dt><dd style="grid-column:1/-1;text-align:left;font-weight:400">${setupNames.length ? setupNames.map(esc).join(", ") : '<span class="muted">None</span>'}</dd>` : "");
 
   const bt = s.backtest;
   if (!bt) {
@@ -518,11 +571,12 @@ function renderDetail() {
     ? s.news.map((n) => `<li><a href="${esc(n.url || "#")}" target="_blank" rel="noopener">${esc(n.title)}</a><div class="muted">${esc(n.source || "")}${n.date ? " · " + new Date(n.date).toLocaleDateString() : ""}</div></li>`).join("")
     : `<li class="muted">No headlines${DATA.sample ? " in sample mode" : ""}.</li>`;
 
-  drawPrice(s);
+  drawPrice(s, ind);
 }
 
-function drawPrice(s) {
+function drawPrice(s, ind) {
   chartDefaults();
+  ind = ind || calcIndicators(s.history.map((r) => r[1]));
   const h = s.history.slice(-range);
   const labels = h.map((r) => r[0]);
   const idx = new Map(labels.map((d, i) => [d, i]));
@@ -541,6 +595,9 @@ function drawPrice(s) {
         line("Price", 1, css("--s1"), 2),
         line("50-day avg", 2, css("--s2"), 1.5),
         line("200-day avg", 3, css("--s3"), 1.5),
+        { label: "Upper band", data: ind.up.slice(-range), borderColor: css("--text-3"), borderDash: [4, 3], borderWidth: 1, pointRadius: 0, pointHoverRadius: 0, tension: 0, spanGaps: true, fill: false },
+        { label: "Lower band", data: ind.lo.slice(-range), borderColor: css("--text-3"), borderDash: [4, 3], borderWidth: 1, pointRadius: 0, pointHoverRadius: 0, tension: 0, spanGaps: true,
+          fill: "-1", backgroundColor: css("--s1") + "12" },
         { label: "Dip buy", data: buys, showLine: false, pointStyle: "triangle", pointRadius: 7, pointHoverRadius: 9,
           backgroundColor: css("--text"), borderColor: surface, borderWidth: 2 },
       ],
@@ -563,6 +620,61 @@ function drawPrice(s) {
   };
   if (priceChart) priceChart.destroy();
   priceChart = new Chart($("priceChart"), cfg);
+  drawIndicators(s, ind, range);
+}
+
+
+/* ---------- technical indicators (same maths as market.py) ---------- */
+function emaSeries(arr, span, alpha) {
+  const a = alpha ?? 2 / (span + 1); let prev = null;
+  return arr.map((v) => { if (v == null) return prev; prev = prev == null ? v : a * v + (1 - a) * prev; return prev; });
+}
+function calcIndicators(closes) {
+  const n = closes.length;
+  const d = closes.map((c, i) => (i === 0 || c == null || closes[i - 1] == null) ? null : c - closes[i - 1]);
+  const g = emaSeries(d.map((x) => x == null ? null : Math.max(x, 0)), null, 1 / 14);
+  const l = emaSeries(d.map((x) => x == null ? null : Math.max(-x, 0)), null, 1 / 14);
+  const rsi = g.map((v, i) => v == null || l[i] == null ? null : l[i] === 0 ? 100 : 100 - 100 / (1 + v / l[i]));
+  const e12 = emaSeries(closes, 12), e26 = emaSeries(closes, 26);
+  const macd = e12.map((v, i) => v == null ? null : v - e26[i]);
+  const sig = emaSeries(macd, 9);
+  const hist = macd.map((v, i) => v == null ? null : v - sig[i]);
+  const up = new Array(n).fill(null), mid = new Array(n).fill(null), lo = new Array(n).fill(null);
+  for (let i = 19; i < n; i++) {
+    const w = closes.slice(i - 19, i + 1); if (w.some((x) => x == null)) continue;
+    const m = w.reduce((a, b) => a + b, 0) / 20, sd = Math.sqrt(w.reduce((a, b) => a + (b - m) ** 2, 0) / 20);
+    mid[i] = m; up[i] = m + 2 * sd; lo[i] = m - 2 * sd;
+  }
+  return { rsi, macd, sig, hist, up, mid, lo };
+}
+function indicatorReadout(s, ind) {
+  const i = ind.rsi.length - 1, r = ind.rsi[i], m = ind.macd[i], sg = ind.sig[i], c = s.history[i][1];
+  const pb = ind.up[i] == null ? null : (c - ind.lo[i]) / (ind.up[i] - ind.lo[i]);
+  const rTxt = r == null ? "" : r >= 70 ? `RSI ${Math.round(r)}: overbought zone (above 70), the stock has risen fast.` : r <= 30 ? `RSI ${Math.round(r)}: oversold zone (below 30), the stock has fallen fast.` : `RSI ${Math.round(r)}: neutral (between 30 and 70).`;
+  const mTxt = m == null ? "" : m > sg ? "MACD above its signal line: short-term momentum is up." : "MACD below its signal line: short-term momentum is down.";
+  const bTxt = pb == null ? "" : pb > 1 ? "Price is above the upper Bollinger Band: unusually high vs the last 20 days." : pb < 0 ? "Price is below the lower Bollinger Band: unusually low vs the last 20 days." : `Price is in the ${pb >= 0.5 ? "upper" : "lower"} half of its Bollinger Bands (%B ${pb.toFixed(2)}).`;
+  return { text: [rTxt, mTxt, bTxt].filter(Boolean).join(" "), pb, r, m, sg };
+}
+let rsiChart, macdChart;
+function drawIndicators(s, ind, n) {
+  const h = s.history.slice(-n), labels = h.map((r) => r[0]), cut = (a) => a.slice(-n);
+  const x = { grid: { display: false }, border: { color: css("--border") }, ticks: { maxTicksLimit: 6, maxRotation: 0, callback: function (v) { return new Date(this.getLabelForValue(v) + "T00:00").toLocaleDateString(undefined, n <= 126 ? { month: "short", day: "numeric" } : { month: "short", year: "2-digit" }); } } };
+  const base = { responsive: true, maintainAspectRatio: false, animation: false, interaction: { mode: "index", intersect: false }, plugins: { legend: { display: false } } };
+  const ln = (label, data, color, w = 1.5) => ({ type: "line", label, data, borderColor: color, backgroundColor: color, borderWidth: w, pointRadius: 0, pointHoverRadius: 3, tension: 0, spanGaps: true });
+  if (rsiChart) rsiChart.destroy();
+  rsiChart = new Chart($("rsiChart"), { type: "line", data: { labels, datasets: [ln("RSI", cut(ind.rsi), css("--s1"), 2)] },
+    options: { ...base, plugins: { ...base.plugins, tooltip: { ...tooltipStyle(), callbacks: { label: (c) => ` RSI: ${c.raw.toFixed(1)}` } } },
+      scales: { x, y: { min: 0, max: 100, border: { display: false }, ticks: { stepSize: 30, callback: (v) => [30, 70].includes(v) ? v : "" },
+        afterBuildTicks: (ax) => { ax.ticks = [0, 30, 70, 100].map((v) => ({ value: v })); },
+        grid: { color: (c) => [30, 70].includes(c.tick.value) ? css("--warn") : "transparent" } } } }, plugins: [crosshair] });
+  const hist = cut(ind.hist);
+  if (macdChart) macdChart.destroy();
+  macdChart = new Chart($("macdChart"), { type: "bar",
+    data: { labels, datasets: [
+      ln("MACD", cut(ind.macd), css("--s1"), 2), ln("Signal", cut(ind.sig), css("--s2"), 1.5),
+      { type: "bar", label: "Histogram", data: hist, backgroundColor: hist.map((v) => v >= 0 ? css("--up") : css("--down")), borderWidth: 0, barPercentage: 1, categoryPercentage: 0.9 }] },
+    options: { ...base, plugins: { ...base.plugins, tooltip: { ...tooltipStyle(), callbacks: { label: (c) => ` ${c.dataset.label}: ${c.raw == null ? "—" : c.raw.toFixed(2)}` } } },
+      scales: { x, y: { border: { display: false }, grid: { color: (c) => c.tick.value === 0 ? css("--text-3") : css("--grid") } } } }, plugins: [crosshair] });
 }
 
 function tradeTable(trades, withSym) {
@@ -642,6 +754,7 @@ function mInit() {
   $("mGroup").onchange = () => { mGroup = $("mGroup").value; mRender(); };
   $("mSearch").oninput = () => mRenderAll();
   mRender();
+  if (DATA) renderDetail();   // show today's setups in the Mag 7 detail panel
 }
 function mFocus(g) { mGroup = mGroup === g ? ALLG : g; mRender(); }
 
@@ -651,7 +764,7 @@ function mRender() {
   document.querySelectorAll(".mGname").forEach((e) => e.textContent = mGroup);
   document.querySelectorAll(".mGname2").forEach((e) => e.textContent = mGroup === ALLG ? "All S&P 500 stocks" : mGroup);
   document.querySelectorAll(".mPname").forEach((e) => e.textContent = MP[mPeriod].toLowerCase());
-  mRenderTiles(); mRenderBars(); mRenderHeat(); mRenderScore(); mRenderMovers(); mRenderAll(); mRenderCharts();
+  mRenderTiles(); mRenderIdeas(); mRenderBars(); mRenderHeat(); mRenderScore(); mRenderMovers(); mRenderAll(); mRenderCharts();
 }
 
 /* ---- headline tiles + takeaway ---- */
@@ -779,8 +892,52 @@ function mRenderScore() {
   $("mScoreNote").textContent = `Rising, falling, median and fund columns cover ${MP[p].toLowerCase()}; the last four are as of today. Click a column to sort, a row to focus on that sector.`;
 }
 
+
+/* ---- trade ideas (technical setups) ---- */
+const BIAS = { bullish: ["Bullish signal", "var(--up)"], bearish: ["Bearish signal", "var(--down)"], caution: ["Caution", "var(--warn-text)"], watch: ["Watch: direction unclear", "var(--text-2)"] };
+const ideaOpen = {};   // setup id -> showing all matches
+function verdict(x, base) {
+  const st = x.stats;
+  if (!st || !st.signals) return "Not enough past signals to judge.";
+  const diff = st.pct_up - base.pct_up;
+  const line = `Past record: ${num(st.signals)} signals, ${p0(st.pct_up)} were higher ${HZ()} later (all stocks: ${p0(base.pct_up)}), median ${fmtChg(st.median)}.`;
+  let v;
+  if (x.bias === "watch" || Math.abs(diff) < 0.02) v = "No clear edge over a random stock.";
+  else if ((x.bias === "bullish") === (diff > 0)) v = x.bias === "bullish" ? "Has beaten the average stock." : "Has been followed by weaker returns than average, as the signal suggests.";
+  else v = x.bias === "bullish" ? "Has actually done worse than the average stock." : "Stocks with this signal actually did better than average.";
+  return line + " " + v;
+}
+const HZ = () => MKT.ideas.horizon_days === 21 ? "1 month" : `${MKT.ideas.horizon_days} trading days`;
+function mRenderIdeas() {
+  const I = MKT.ideas; if (!I) { $("ideas").classList.add("hidden"); return; }
+  const bySym = Object.fromEntries(MKT.stocks.map((s) => [s.symbol, s]));
+  const scope = mGroup === ALLG ? "all S&P 500 stocks" : mGroup;
+  $("mIdeasNote").textContent = `Stocks matching common chart setups at the ${MKT.as_of} close · ${scope} · past record measured ${I.stats_from} to ${I.stats_to}`;
+  $("mIdeas").innerHTML = I.setups.map((x) => {
+    const list = x.matches.map((k) => bySym[k]).filter((s) => s && inGroup(s));
+    const all = ideaOpen[x.id], shown = all ? list : list.slice(0, 6);
+    const [bl, bc] = BIAS[x.bias] || [x.bias, "var(--text-2)"];
+    const rows = shown.map((s) => `<tr title="${esc(s.name)} · ${esc(s.sector)}"><td><a href="https://finance.yahoo.com/quote/${encodeURIComponent(s.symbol)}" target="_blank" rel="noopener"><strong>${esc(s.symbol)}</strong></a></td>
+      <td class="num">${money(s.price)}</td><td class="num">${s.rsi14 == null ? "—" : Math.round(s.rsi14)}</td>
+      <td class="num hide-sm">${s.bb_pctb == null ? "—" : s.bb_pctb.toFixed(2)}</td>
+      <td class="num ${s.macd_state === "bullish" ? "chg-up" : "chg-down"}">${s.macd_state === "bullish" ? "▲" : s.macd_state ? "▼" : "—"}</td>
+      <td class="num ${cls(s.chg_1w)}">${pct(s.chg_1w)}</td></tr>`).join("");
+    return `<div class="card idea">
+      <div class="idea-h"><h2>${esc(x.name)}</h2><span class="pill" style="color:${bc};border-color:${bc}">${bl}</span></div>
+      <div class="muted">${esc(x.rule)}</div>
+      <p class="idea-ex">${esc(x.explain)}</p>
+      <p class="idea-rec">${verdict(x, I.baseline)}</p>
+      ${list.length ? `<div class="tbl-wrap"><table class="idea-t"><thead><tr><th class="nosort">${list.length} match${list.length > 1 ? "es" : ""}</th><th class="nosort">Price</th><th class="nosort">RSI</th><th class="nosort hide-sm">%B</th><th class="nosort">MACD</th><th class="nosort">1W</th></tr></thead><tbody>${rows}</tbody></table></div>
+        ${list.length > 6 ? `<button class="btn more" type="button" data-id="${x.id}">${all ? "Show fewer" : `Show all ${list.length}`}</button>` : ""}`
+        : `<p class="muted" style="margin:8px 0 0">No ${mGroup === ALLG ? "" : esc(mGroup) + " "}stocks match today.</p>`}
+    </div>`;
+  }).join("");
+  $("mIdeas").querySelectorAll(".more").forEach((b) => b.onclick = () => { ideaOpen[b.dataset.id] = !ideaOpen[b.dataset.id]; mRenderIdeas(); });
+}
+
 /* ---- movers + all stocks ---- */
 const inGroup = (s) => mGroup === ALLG || s.sector === mGroup;
+const SHORT = { pullback: "Pullback", lower_band_bounce: "Band bounce", macd_bull: "MACD ▲", squeeze: "Squeeze", new_high: "52w high", overbought: "Overbought", macd_bear: "MACD ▼" };
 function mRenderMovers() {
   const k = "chg_" + mPeriod;
   const list = MKT.stocks.filter((s) => inGroup(s) && s[k] != null);
@@ -805,7 +962,10 @@ function mRenderAll() {
     { k: "vs_sma200", label: "vs 200-day", fmt: fmtChg, color: true, hide: true },
     { k: "from_52w_high", label: "From 52w high", fmt: (v) => pct(v), hide: true },
     { k: "rsi14", label: "RSI", fmt: (v) => v == null ? "—" : Math.round(v), hide: true },
-  ], rows, { key: "symbol", redraw: mRenderAll });
+    { k: "macd_hist", label: "MACD", fmt: (v) => v == null ? "—" : v >= 0 ? '<span class="chg-up">▲</span>' : '<span class="chg-down">▼</span>', hide: true },
+    { k: "bb_pctb", label: "%B", fmt: (v) => v == null ? "—" : v.toFixed(2), hide: true },
+    { k: "setups_label", label: "Setups", left: true, hide: true, fmt: (v) => esc(v || "") },
+  ], rows.map((r) => ({ ...r, setups_label: (r.setups || []).map((id) => SHORT[id] || id).join(", ") })), { key: "symbol", redraw: mRenderAll });
   $("mAllNote").textContent = `${rows.length} stock${rows.length === 1 ? "" : "s"}${mSort.mAll ? "" : `, sorted by ${MP[mPeriod].toLowerCase()} change`} · click a column to sort`;
 }
 
