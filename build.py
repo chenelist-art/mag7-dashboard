@@ -8,9 +8,11 @@ What it does, in order:
   4. Backtests the dip rule since 2015 and compares each trade to SPY
   5. Grabs recent headlines and (optionally) asks Gemini for a short summary
   6. Saves everything to docs/data.json, which the dashboard page reads
+  7. Builds market breadth for the whole S&P 500 (market.py -> docs/market.json)
 
 Run:  python build.py            (real data)
       python build.py --sample   (fake data, for testing without internet)
+      python build.py --no-market  (skip the S&P 500 market breadth part)
 """
 
 import argparse
@@ -237,6 +239,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--sample", action="store_true", help="use fake prices (offline test)")
     ap.add_argument("--no-ai", action="store_true", help="skip the Gemini summary")
+    ap.add_argument("--no-market", action="store_true", help="skip the S&P 500 market breadth part")
     args = ap.parse_args()
 
     names = {**C.MAG7, **C.BENCHMARKS}
@@ -268,6 +271,15 @@ def main():
     if not stocks:
         sys.exit("Every stock failed — see the errors above.")
     finish(stocks, all_trades, symbols, args)
+
+    # 7. Market breadth (separate file, so a problem here never breaks the Mag 7 part)
+    if C.MARKET_ENABLED and not args.sample and not args.no_market:
+        try:
+            import market
+            market.build_market(mag7=tuple(C.MAG7))
+        except Exception:
+            print("  Market breadth failed — keeping the previous docs/market.json:")
+            traceback.print_exc()
 
 
 def process(sym, names, prices, bench_close, args):

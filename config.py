@@ -36,3 +36,31 @@ CHART_DAYS = 504        # ~2 years of daily prices sent to the page
 # Only runs if the GEMINI_API_KEY environment variable is set.
 GEMINI_MODEL = "gemini-3.5-flash-lite"   # free-tier model; change if Google retires it
 NEWS_PER_STOCK = 5
+
+# ---- Market breadth (whole S&P 500, by sector) ----
+# Turn off with MARKET_ENABLED = False, or run build.py --no-market
+MARKET_ENABLED = True
+# Current S&P 500 members with GICS sectors (free, community-maintained list on GitHub)
+SP500_LIST_URL = "https://raw.githubusercontent.com/datasets/s-and-p-500-companies/main/data/constituents.csv"
+MARKET_HISTORY_DAYS = 252   # ~1 year of daily breadth history for the charts
+# Index + sector funds shown next to the breadth numbers: symbol -> (name, sector it tracks)
+MARKET_BENCHMARKS = {
+    "^GSPC": ("S&P 500 index", "S&P 500"),
+    "SPY": ("SPDR S&P 500 ETF", None),
+    "RSP": ("S&P 500 Equal Weight ETF", None),
+    "QQQ": ("Nasdaq-100 ETF", None),
+    "DIA": ("Dow Jones ETF", None),
+    "IWM": ("Russell 2000 small caps ETF", None),
+    "^VIX": ("VIX volatility index", None),
+    "XLC": ("Communication Services SPDR", "Communication Services"),
+    "XLY": ("Consumer Discretionary SPDR", "Consumer Discretionary"),
+    "XLP": ("Consumer Staples SPDR", "Consumer Staples"),
+    "XLE": ("Energy SPDR", "Energy"),
+    "XLF": ("Financials SPDR", "Financials"),
+    "XLV": ("Health Care SPDR", "Health Care"),
+    "XLI": ("Industrials SPDR", "Industrials"),
+    "XLK": ("Technology SPDR", "Information Technology"),
+    "XLB": ("Materials SPDR", "Materials"),
+    "XLRE": ("Real Estate SPDR", "Real Estate"),
+    "XLU": ("Utilities SPDR", "Utilities"),
+}
