@@ -2,8 +2,13 @@ name: Daily update
 
 on:
   schedule:
-    # 21:30 UTC Mon–Fri = 5:30am Malaysia time Tue–Sat, after the US market closes
+    # 21:30 UTC Mon–Fri = 5:30am Malaysia time Tue–Sat, after the US market closes.
+    # This early run often misses the latest close (Yahoo hasn't settled it yet,
+    # and GitHub usually starts scheduled runs 2–5 hours late).
     - cron: "30 21 * * 1-5"
+    # Catch-up run: 10:00 UTC Tue–Sat = 6pm Malaysia time, well after Yahoo has
+    # the final close and still hours before the next US open (9:30pm Malaysia).
+    - cron: "0 10 * * 2-6"
   workflow_dispatch:        # adds a "Run workflow" button for manual runs
 
 permissions:
